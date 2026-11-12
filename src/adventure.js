@@ -7,7 +7,7 @@ import { bkey, getB, hmap, inWorld, PLAT_POS, placed, setB } from './world.js';
 import { burst, chunkMat, clouds, scene, sky, spawnP, sunLight, TEX } from './render.js';
 import { sndGood, sndMoo, sndPop, tone } from './audio.js';
 import { writeSave } from './save.js';
-import { dirV, eyeV, HW, PH, player } from './player.js';
+import { boxHits, dirV, eyeV, HW, PH, player } from './player.js';
 import { plats } from './platforms.js';
 import { COW_DEFS, cows, raycaster, walkableY } from './cows.js';
 import { silCanvas, state, toast } from './ui.js';
@@ -185,13 +185,15 @@ function updateCuatrero(u, dt){
         const c = u.target; if (c && !c.held && Math.hypot(c.x - u.x, c.z - u.z) < 1.35 && Math.abs(c.gy - u.gy) <= 2){ c.held = true; c.holder = u; u.cow = c; u.target = null; u.state = 'tie'; u.t = 2.5; u.path = []; sndAlarm(); toast('¡Un cuatrero atrapó a tu ' + cowName(c) + '! Enciérralo antes de que se la lleve.'); refreshCounter(); }
       }
     }
-    else if (u.state === 'tie'){ u.t -= dt; const c = u.cow; if (!c){ u.state = 'seek'; } else { u.rot = Math.atan2(c.x - u.x, c.z - u.z); if (u.t <= 0){ u.site = choosePen(u); u.state = 'carry'; u.rp = 0; u.lost = 0; } } }
+    else if (u.state === 'tie'){ u.t -= dt; const c = u.cow; if (!c){ u.state = 'seek'; } else { u.rot = Math.atan2(c.x - u.x, c.z - u.z); if (u.t <= 0){ u.site = choosePen(u); u.state = 'carry'; u.rp = 0; u.lost = 0; u.idle = 0; } } }
     else if (u.state === 'carry'){
       const c = u.cow; if (!c){ u.state = awake() ? 'seek' : 'sleep'; }
       else {
         const [sx, sz] = u.site; u.rp -= dt;
-        if (u.rp <= 0){ u.rp = 0.8; const res = bfs(Math.floor(u.x), Math.floor(u.z), u.gy, (x, z) => x === sx && z === sz); if (res.goal != null){ u.path = pathFrom(res); u.lost = 0; } else if (++u.lost >= 3){ u.site = [Math.floor(u.x), Math.floor(u.z)]; u.path = []; } }
+        if (u.rp <= 0){ u.rp = 0.8; const res = bfs(Math.floor(u.x), Math.floor(u.z), u.gy, (x, z) => x === sx && z === sz); if (res.goal != null){ u.path = pathFrom(res); u.lost = 0; } else if (++u.lost >= 3){ u.site = [Math.floor(u.x), Math.floor(u.z)]; u.path = [u.site.slice()]; } }
         follow(u, 1.35, dt);
+        u.idle = u.moving ? 0 : (u.idle || 0) + dt;   // sin avanzar varios segundos: arma el corral ahí mismo
+        if (u.idle > 5 && !(u.stun > 0)){ u.idle = 0; u.site = [Math.floor(u.x), Math.floor(u.z)]; u.x = u.site[0] + 0.5; u.z = u.site[1] + 0.5; }
         // la vaca lo sigue amarrada
         const fx = Math.sin(u.rot), fz = Math.cos(u.rot), k = Math.min(1, dt*6); c.x += (u.x - fx*1.15 - c.x)*k; c.z += (u.z - fz*1.15 - c.z)*k; c.gy = u.gy; c.rot = u.rot;
         if (Math.floor(u.x) === u.site[0] && Math.floor(u.z) === u.site[1] && Math.hypot(u.site[0] + 0.5 - u.x, u.site[1] + 0.5 - u.z) < 0.2) buildCorral(u);
@@ -207,6 +209,14 @@ function updateCuatrero(u, dt){
   u.head.rotation.x += ((u.state === 'sleep' ? 0.55 : 0) - u.head.rotation.x)*Math.min(1, dt*4); u.head.rotation.y = u.stun > 0 ? Math.sin(GS.playTime*14)*0.5 : 0;
   u.g.rotation.z = u.state === 'trapped' ? Math.sin(GS.playTime*32)*0.09 : (u.stun > 0 ? Math.sin(GS.playTime*9)*0.12 : 0);
   u.g.position.set(u.x, u.y, u.z); u.g.rotation.y = u.rot;
+}
+/* el jugador no atraviesa vacas ni cuatreros: si se superponen, lo empuja hacia afuera (sin meterlo en un bloque) */
+export function collideCharacters(){
+  const push = (cx, cz, cy, r, h) => { if (player.y >= cy + h || player.y + PH <= cy) return; const dx = player.x - cx, dz = player.z - cz, d = Math.hypot(dx, dz), min = r + HW; if (d >= min) return;
+    const nx = Math.max(HW, Math.min(64 - HW, d > 0.001 ? cx + dx/d*min : cx + min)), nz = Math.max(HW, Math.min(64 - HW, d > 0.001 ? cz + dz/d*min : cz));
+    if (!boxHits(nx, player.y, player.z)) player.x = nx; if (!boxHits(player.x, player.y, nz)) player.z = nz; };
+  for (const c of cows){ const D = COW_DEFS[c.vi]; push(c.x, c.z, c.y, 0.55, D.legH + D.body[1]); }
+  for (const u of cuatreros) push(u.x, u.z, u.y, 0.32, 1.85);
 }
 /* click (o Romper) sobre un cuatrero: queda mareado unos segundos */
 export function hitCuatrero(maxT){

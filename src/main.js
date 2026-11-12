@@ -16,7 +16,7 @@ import './prize.js';
 import './ui.js';
 import './debug.js';
 import * as adv from './adventure.js';
-import { refreshModeUI, updateAdventure } from './adventure.js';
+import { collideCharacters, refreshModeUI, updateAdventure } from './adventure.js';
 import { musicInfo, refreshMusicUI } from './music.js';
 import { LATE } from './state.js';
 import { bkey, placed } from './world.js';
@@ -48,7 +48,7 @@ export function frame(now){
   updateDebug(dt);
   if (state === 'prize'){ orbit.update(); renderer.render(prizeScene, prizeCam); return; }
   if (state === 'play'){
-    GS.playTime += dt; updatePlayer(dt); for (const c of cows) updateCow(c, dt); for (const p of plats) if (p.anim) updatePlatAnim(p, dt); updateParticles(dt); updateTarget(); updateAdventure(dt);
+    GS.playTime += dt; updatePlayer(dt); for (const c of cows) updateCow(c, dt); for (const p of plats) if (p.anim) updatePlatAnim(p, dt); updateParticles(dt); updateAdventure(dt); collideCharacters(); updateTarget();
     if (GS.winAt != null && GS.playTime >= GS.winAt){ GS.winAt = null; showWin(); }
     if (DEBUG){ fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5){ $('fps').textContent = Math.round(fpsN/fpsAcc) + ' fps'; fpsAcc = 0; fpsN = 0; } }
   }
