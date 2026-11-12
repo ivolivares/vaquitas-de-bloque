@@ -1,4 +1,5 @@
 /* PREMIO: peluche "Ternerito Dorado" en un estudio aparte */
+import { GS } from './state.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -15,6 +16,7 @@ export const EDITIONS = {
   faja:    { label:'Edición Faja', base:[52,48,58], alt:[246,238,222], stitch:[150,142,162], sheen:[170,170,200] },
   grenuda: { label:'Edición Greñuda', base:[200,108,46], alt:[240,194,114], stitch:[122,58,22], sheen:[255,200,150] },
   lunar:   { label:'Edición Lunar', base:[190,168,228], alt:[108,116,146], stitch:[128,104,178], sheen:[230,220,255] },
+  real:    { label:'Edición Real', base:[246,238,220], alt:[122,62,168], stitch:[196,170,120], sheen:[255,246,225] },
   clasico: { label:'Edición Clásica', base:[250,236,206], alt:[232,178,58], stitch:[200,160,96], sheen:[255,246,220] },
 };
 export const GOLD = [234,180,58];
@@ -71,6 +73,9 @@ export function buildPlush(edKey){
     const cr = G => { patch(G, [[2,3,4,4],[3,2,2,6]], E.alt, [70,76,100]); patch(G, [[10,9,4,3],[11,8,2,5]], E.alt, [70,76,100]); patch(G, [[9,2,3,3]], GOLD, goldStitch); };
     const side = clothMat(fabricTex(E.base, E.stitch, cr, 11), E.sheen), top = clothMat(fabricTex(E.base, E.stitch, G => patch(G, [[6,5,4,5],[5,6,6,3]], E.alt, [70,76,100]), 12), E.sheen);
     bodyMats = [side, side, top, plain(13), plain(14), plain(15)];
+  } else if (edKey === 'real'){
+    const side = clothMat(fabricTex(E.base, E.stitch, G => { patch(G, [[0,0,16,7]], E.alt, [236,190,70]); patch(G, [[7,9,2,2],[6,10,4,2],[7,12,2,1]], GOLD, goldStitch); }, 36), E.sheen);
+    bodyMats = [side, side, clothMat(fabricTex(E.alt, [236,190,70], null, 37), E.sheen), plain(38), plain(39), plain(40)];
   } else {
     const side = clothMat(fabricTex(E.base, E.stitch, G => { patch(G, [[2,3,5,4],[3,2,3,6]], GOLD, goldStitch); patch(G, [[10,9,4,4]], GOLD, goldStitch); }, 16), E.sheen);
     bodyMats = [side, side, clothMat(fabricTex(E.base, E.stitch, G => patch(G, [[5,5,6,5]], GOLD, goldStitch), 17), E.sheen), plain(18), plain(19), plain(20)];
@@ -96,6 +101,11 @@ export function buildPlush(edKey){
   // etiqueta de colección cosida al costado
   const tagTex = (function(){ const c = mkCanvas(96, 64), G = c.getContext('2d'); G.fillStyle = '#fff8e8'; G.fillRect(0, 0, 96, 64); G.strokeStyle = '#c99a3a'; G.setLineDash([6, 4]); G.lineWidth = 2; G.strokeRect(4, 4, 88, 56); G.setLineDash([]); G.fillStyle = '#b07a1a'; G.font = 'bold 30px Georgia,serif'; G.textAlign = 'center'; G.textBaseline = 'middle'; G.fillText('T·D', 48, 34); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
   const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.16), new THREE.MeshStandardMaterial({ map:tagTex, roughness:0.9, side:THREE.DoubleSide })); tag.position.set(0.535, Y0 + 0.5, -0.62); tag.rotation.y = Math.PI/2; tag.rotation.x = 0.12; g.add(tag);
+  if (GS.crown){   // corona bordada: solo para quien ganó en legendario
+    rbox(g, 0.6, 0.16, 0.5, 0.05, goldMat(), 0, Y0 + 1.96, 0.6);
+    for (const [cx, cz] of [[-0.22, -0.17], [0.22, -0.17], [-0.22, 0.17], [0.22, 0.17], [0, 0.17]]) rbox(g, 0.14, cx === 0 ? 0.3 : 0.2, 0.14, 0.05, goldMat(), cx, Y0 + (cx === 0 ? 2.14 : 2.1), 0.6 + cz);
+    rbox(g, 0.12, 0.12, 0.08, 0.04, clothMat(fabricTex([206,44,70], [150,20,40], null, 43), [255,180,190], 0.6), 0, Y0 + 1.97, 0.86);
+  }
   prizeScene.add(g); plush = g; plushEdition = edKey;
 }
-export function bestEdition(){ let best = null; plats.forEach(p => { if (p.done && p.time != null && (best == null || p.time < best.time)) best = p; }); return best ? best.V.key : 'clasico'; }
+export function bestEdition(){ if (plats[3] && plats[3].done) return 'real'; let best = null; plats.forEach(p => { if (p.done && p.time != null && (best == null || p.time < best.time)) best = p; }); return best ? best.V.key : 'clasico'; }

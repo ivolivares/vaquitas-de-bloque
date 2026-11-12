@@ -6,7 +6,8 @@ Juego 3D en primera persona para navegador de escritorio. Explora un pequeño mu
 - Se juega con teclado y mouse, o con controles táctiles en teléfonos y tablets.
 - Dos modos: aventura (de noche llegan cuatreros a robarte las vacas) y libre.
 - Tres dificultades en aventura: fácil, difícil (bloques contados, noches largas, oleadas crecientes y un cuatrero que rompe cercas) y legendario (además vacas de 23 bloques, sin ayudas y corrales que se alejan).
-- Modo debug: agrega `?debug=true` a la URL (panel de condiciones con F3, K completa la plataforma más cercana, L adelanta el anochecer, J el amanecer, contador de fps).
+- Secreto: bajo el punto de inicio hay una casa enterrada con una llave que abre el Reino de Piedra, donde vive la Vaca Real.
+- Modo debug: agrega `?debug=true` a la URL (panel de condiciones con F3, K completa la plataforma más cercana, L adelanta el anochecer, J el amanecer, O abre el segundo mapa, contador de fps).
 
 ## Desarrollo
 
@@ -26,7 +27,9 @@ npm run build    # genera dist/ (lo mismo que corre Vercel en cada push a main)
 | `src/platforms.js`, `src/cows.js` | Hologramas, validación y vacas |
 | `src/prize.js` | Escena del peluche Ternerito Dorado |
 | `src/adventure.js` | Modo aventura: día y noche, cuatreros, corrales y tips |
-| `src/music.js` | Música chiptune sintetizada (4 temas de día y 1 de noche) |
+| `src/music.js` | Música chiptune sintetizada (temas de día por mapa y 1 de noche) |
+| `src/portal.js` | La llave escondida y el paso al segundo mapa, el Reino de Piedra |
+| `src/records.js` | Récords por dificultad, guardados en el dispositivo |
 | `src/touch.js`, `src/share.js` | Controles táctiles y botones para compartir |
 | `src/ui.js`, `src/audio.js`, `src/save.js`, `src/debug.js` | HUD y menús, sonido, guardado y panel de debug |
 | `public/` | Favicon, íconos, imagen Open Graph, manifest, robots y sitemap |

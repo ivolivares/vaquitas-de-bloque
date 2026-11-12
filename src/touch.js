@@ -35,7 +35,7 @@ function hold(el, fn, every){ let iv = null; const stop = () => { clearInterval(
 hold($('tBreak'), actBreak, 280); hold($('tPlace'), actPlace, 0);
 const jump = $('tJump'); jump.addEventListener('pointerdown', e => { e.preventDefault(); keys.Space = true; }); ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => jump.addEventListener(n, () => { keys.Space = false; }));
 $('tPause').addEventListener('pointerdown', e => { e.preventDefault(); GS.joyF = GS.joyS = 0; setState('pause'); });
-[...$('hotbar').children].forEach((el, i) => el.addEventListener('pointerdown', e => { if (e.pointerType === 'touch'){ e.preventDefault(); selectSlot(i); } }));
+$('hotbar').addEventListener('pointerdown', e => { const el = e.target.closest('.slot'); if (el && e.pointerType === 'touch'){ e.preventDefault(); selectSlot([...$('hotbar').children].indexOf(el)); } });
 document.addEventListener('gesturestart', e => e.preventDefault());
 
 /* pantalla completa: automática al empezar en táctil (donde el navegador lo permite) y opcional desde la pausa */

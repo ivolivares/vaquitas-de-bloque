@@ -1,5 +1,5 @@
 /* ACCIONES DEL JUGADOR: romper, poner, acariciar */
-import { bkey, placed } from './world.js';
+import { bkey, foreign, placed } from './world.js';
 import * as THREE from 'three';
 import { GS, LATE } from './state.js';
 import { $ } from './util.js';
@@ -14,14 +14,21 @@ import { cows, petCow, raycaster } from './cows.js';
 
 export const HOTBAR = [B.DIRT, B.STONE, B.WOOD, B.BLACK, B.WHITE, B.RUST, B.BROWN, B.LAVENDER, B.SLATE];
 export function cowUnderAim(maxT){ raycaster.set(eyeV, dirV); raycaster.near = 0; raycaster.far = maxT; const hits = raycaster.intersectObjects(cows.map(c => c.group), true); if (!hits.length) return null; let o = hits[0].object; while (o && !o.userData.cow) o = o.parent; return o ? o.userData.cow : null; }
+let recoverTold = false;
 export function actBreak(){
   aim(); const hit = raycastGrid(eyeV, dirV, REACH); const cow = cowUnderAim(hit.hit ? Math.min(REACH, hit.t) : REACH);   // la vaca tiene prioridad sobre los bloques
   if (LATE.hitCuatrero && LATE.hitCuatrero(hit.hit ? Math.min(REACH, hit.t) : REACH)) return;   // click sobre un cuatrero: lo marea
   if (cow){ petCow(cow); return; }
   if (!hit.hit) return;
   if (isProtected(hit.x, hit.y, hit.z)){ sndThud(); LATE.toast('Ese bloque no se puede romper.'); return; }
-  const avg = tileAvg[BLOCK_TILES[hit.id][2]]; setB(hit.x, hit.y, hit.z, 0); placed.delete(bkey(hit.x, hit.y, hit.z)); sndCrunch();
-  if (GS.inv){ let k = HOTBAR.indexOf(hit.id); if (k < 0) k = hit.id === B.GRASS ? 0 : (hit.id === B.LOG ? 2 : -1); if (k >= 0){ GS.inv[k]++; LATE.refreshInv(); } }   // con bloques contados, romper devuelve material
+  const key = bkey(hit.x, hit.y, hit.z), mine = placed.has(key) && !foreign.has(key), theirs = foreign.has(key);
+  const avg = tileAvg[BLOCK_TILES[hit.id][2]]; setB(hit.x, hit.y, hit.z, 0); placed.delete(key); foreign.delete(key); sndCrunch();
+  if (GS.inv){ let k = HOTBAR.indexOf(hit.id); if (k < 0) k = hit.id === B.GRASS ? 0 : (hit.id === B.LOG ? 2 : -1); if (k >= 0 && !theirs){
+      if (mine) GS.inv[k]++;                                                            // lo que tú pusiste siempre vuelve
+      else if (GS.recover > 0){ GS.inv[k]++; GS.recover--; }                            // el terreno devuelve material hasta agotar el límite
+      else if (GS.inv[0] + GS.inv[1] + GS.inv[2] < 4) GS.inv[k]++;                      // reserva mínima: siempre puedes juntar 4 bloques para encerrar a un cuatrero
+      else if (!recoverTold){ recoverTold = true; LATE.toast('Agotaste lo que puedes recuperar del terreno.'); }
+      LATE.refreshInv(); } }
   burst(TEX.sq, hit.x + 0.5, hit.y + 0.5, hit.z + 0.5, 9, 2.2, new THREE.Color().setRGB(avg[0]/255, avg[1]/255, avg[2]/255, THREE.SRGBColorSpace), 0.16, 12, 0.6); onEdit(hit.x, hit.y, hit.z, false);
 }
 export function actPlace(){

@@ -20,28 +20,36 @@ export function signTexture(name, done){ const c = mkCanvas(256, 96), g = c.getC
   g.fillStyle = '#b98f52'; for (let i = 0; i < 40; i++) g.fillRect(8 + Math.floor(hash2(i, 1, 3)*232), 8 + Math.floor(hash2(i, 2, 3)*78), 8, 2);
   g.fillStyle = '#4a2a10'; g.font = 'bold 34px "Trebuchet MS",Verdana,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText((done ? '✔ ' : '') + name, 128, 50);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
-export const plats = PLAT_POS.map(([px, pz], i) => {
-  const V = VARIANTS[i], H = platH[i], p = { i, V, x:px, z:pz, H, done:false, time:null, startT:null, cells:[], anim:null, group:new THREE.Group() };
-  scene.add(p.group);
-  p.kind = null;
-  // cartel + haz de luz, detrás de la plataforma
-  const sx = px + 2, sz = pz + 5.7, sy = hmap[Math.floor(sx) + Math.floor(sz)*WX];
-  const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.9, 0.16), new THREE.MeshBasicMaterial({ color:0x6b4222 })); post.position.set(sx, sy + 0.95, sz); scene.add(post);
+function makePlat(i){
+  const V = VARIANTS[i], p = { i, V, x:0, z:0, H:0, done:false, time:null, startT:null, cells:[], anim:null, kind:null, group:new THREE.Group(), center:new THREE.Vector3() };
+  p.post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.9, 0.16), new THREE.MeshBasicMaterial({ color:0x6b4222 }));
   p.signMat = new THREE.MeshBasicMaterial({ map:signTexture(V.name, false) });
-  const s1 = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.82), p.signMat), s2 = s1.clone(); s1.position.set(sx, sy + 1.75, sz + 0.09); s2.position.set(sx, sy + 1.75, sz - 0.09); s2.rotation.y = Math.PI; scene.add(s1, s2);
+  p.s1 = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.82), p.signMat); p.s2 = p.s1.clone(); p.s2.rotation.y = Math.PI;
   p.beamMat = new THREE.MeshBasicMaterial({ color:V.beam, transparent:true, opacity:0.42, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false });
-  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 70, 8, 1, true), p.beamMat); beam.position.set(sx, sy + 2.2 + 35, sz); scene.add(beam);
-  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 70, 6, 1, true), p.beamMat); core.position.copy(beam.position); scene.add(core);
-  p.center = new THREE.Vector3(px + 2, H, pz + 2.5);
-  return p;
-});
+  p.beam = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 70, 8, 1, true), p.beamMat); p.core = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 70, 6, 1, true), p.beamMat);
+  scene.add(p.group, p.post, p.s1, p.s2, p.beam, p.core); return p;
+}
+/* ubica la plataforma, su cartel y su haz de luz según el mundo actual */
+function placePlat(p){
+  const [px, pz] = PLAT_POS[p.i]; p.x = px; p.z = pz; p.H = platH[p.i]; p.center.set(px + 2, p.H, pz + 2.5);
+  const sx = px + 2, sz = pz + 5.7, sy = hmap[Math.floor(sx) + Math.floor(sz)*WX];
+  p.post.position.set(sx, sy + 0.95, sz); p.s1.position.set(sx, sy + 1.75, sz + 0.09); p.s2.position.set(sx, sy + 1.75, sz - 0.09); p.beam.position.set(sx, sy + 2.2 + 35, sz); p.core.position.copy(p.beam.position);
+}
+export const plats = PLAT_POS.map((_, i) => { const p = makePlat(i); placePlat(p); return p; });
+/* tras regenerar el mundo: reubica las plataformas (y crea las que falten, como la de la Vaca Real) */
+export function relocatePlats(){
+  while (plats.length < PLAT_POS.length) plats.push(makePlat(plats.length));
+  for (const p of plats){
+    if (p.anim){ p.anim.cubes.forEach(m => scene.remove(m)); p.anim = null; LATE.spawnCow(p); }   // una vaca a medio aparecer no se pierde
+    p.cells.forEach(c => { cellMap.delete(cellKey(c.x, c.y, c.z)); p.group.remove(c.ghost); p.group.remove(c.over); }); p.cells.length = 0; p.kind = null; p.startT = null; placePlat(p); }
+}
 /* plantillas: la base de 14 celdas y la grande de 23 (legendario), que suma lomo, cuernos de madera y cola */
 function templateCells(kind, i, V){
   if (kind !== 'big') return TEMPLATE.map(tc => [tc[0], tc[1], tc[2], tc[3 + i] ? V.b : V.a]);
   const out = [], A = V.a, Bm = V.b, W = 6 /* madera */, add = (x, y, z, m) => out.push([x, y, z, m]);
   for (const [x, z] of [[1, 1], [2, 1], [1, 3], [2, 3]]) add(x, 0, z, i === 1 ? Bm : A);                                   // patas
   for (let y = 1; y <= 2; y++) for (let z = 1; z <= 3; z++) for (let x = 1; x <= 2; x++){                                   // cuerpo de dos pisos
-    let m = A; if (i === 0 && z === 2) m = Bm; if (i === 2 && ((x === 1 && y === 1 && z === 1) || (x === 2 && y === 1 && z === 3) || (x === 2 && y === 2 && z === 2) || (x === 1 && y === 2 && z === 3))) m = Bm; add(x, y, z, m); }
+    let m = A; if (i === 0 && z === 2) m = Bm; if (i === 3 && y === 2) m = Bm; if (i === 2 && ((x === 1 && y === 1 && z === 1) || (x === 2 && y === 1 && z === 3) || (x === 2 && y === 2 && z === 2) || (x === 1 && y === 2 && z === 3))) m = Bm; add(x, y, z, m); }
   for (let y = 2; y <= 3; y++) for (let x = 1; x <= 2; x++) add(x, y, 0, i === 2 && x === 1 && y === 3 ? Bm : A);           // cabeza
   add(0, 3, 0, W); add(3, 3, 0, W);                                                                                         // cuernos
   add(1, 2, 4, Bm);                                                                                                         // cola
@@ -76,7 +84,7 @@ export function updatePlatAnim(p, dt){
     if (Math.random() < dt*10) spawnP(TEX.spark, m.position.x + (Math.random()-0.5), m.position.y + (Math.random()-0.5), m.position.z + (Math.random()-0.5), 0, 1.2, 0, 0.6, 0.3, 0xfff2a0); });
   if (a.t >= 1){ a.cubes.forEach(m => scene.remove(m)); p.anim = null;
     const cow = LATE.spawnCow(p); sndMoo(LATE.COW_DEFS[p.i].pitch); burst(TEX.spark, p.center.x, p.H + 1, p.center.z, 40, 4.5, () => [0xfff2a0, 0xffffff, 0x9dff8a, p.V.beam][Math.floor(Math.random()*4)], 0.32, 5, 1.1); cow.bounce = 1;
-    LATE.toast('¡' + p.V.name + ' lista en ' + fmtTime(p.time) + '!');
+    LATE.toast(p.i === 3 ? '¡Armaste la Vaca Real! Tu premio ahora es la Edición Real.' : '¡' + p.V.name + ' lista en ' + fmtTime(p.time) + '!');
     LATE.tryWin(); }
 }
 export function onEdit(x, y, z, placed){ for (const p of plats){ if (p.done) continue; const c = cellMap.get(cellKey(x, y, z)); const mine = c && c.p === p; if (mine && placed && p.startT == null) p.startT = GS.playTime; evalPlatform(p, mine && placed ? c : null); } }

@@ -17,14 +17,14 @@ export function debugFlags(){
   const vacas = plats.map((p, i) => { let ok = 0, bad = 0; if (!p.done) for (const c of p.cells){ const b = getB(c.x, c.y, c.z); if (b === c.mat) ok++; else if (b !== 0) bad++; }
     return { n:i + 1, nombre:p.V.name, completada:p.done, celdas:p.cells.length, celdasCorrectas:p.done ? p.cells.length : ok, celdasEquivocadas:bad, cronometroIniciado:p.startT != null, cronometro:(!p.done && p.startT != null) ? GS.playTime - p.startT : null, tiempoFinal:p.time, animando:!!p.anim, vacaViva:cows.some(c => c.p === p) }; });
   let guardado; try { guardado = localStorage.getItem(SAVE_KEY); } catch (e){ guardado = 'ERROR: ' + e.message; }
-  return { aventura: LATE.advFlags ? LATE.advFlags() : null, tactil:GS.touch, musica:GS.musicOn, estado:state, mouseCapturado:document.pointerLockElement === canvas, modoSinCaptura:noLock, vacas, vacasCompletadas:plats.filter(p => p.done).length, premioDesbloqueado:GS.prizeUnlocked,
+  return { aventura: LATE.advFlags ? LATE.advFlags() : null, tactil:GS.touch, musica:GS.musicOn, estado:state, mouseCapturado:document.pointerLockElement === canvas, modoSinCaptura:noLock, vacas, vacasCompletadas:plats.slice(0, 3).filter(p => p.done).length, premioDesbloqueado:GS.prizeUnlocked,
     botonPremioPausa:!$('btnPrizePause').classList.contains('hidden'), pantallaVictoria:state === 'win', celebracionEn:GS.winAt != null ? GS.winAt - GS.playTime : null, edicionPeluche:bestEdition(), pelucheConstruido:plushEdition,
     tiempoJugado:GS.playTime, slot:GS.slot + 1, material:BLOCK_NAME[HOTBAR[GS.slot]], silenciado:GS.muted, audio:actx ? actx.state : 'sin iniciar', guardadoListo:GS.saveReady, guardado };
 }
 export function updateDebug(dt){
   if (!DEBUG || !dbgOn) return; dbgAcc += dt; if (dbgAcc < 0.2) return; dbgAcc = 0;
   const f = debugFlags(), yn = (v, a = 'SÍ', b = 'no') => v ? '<span class="on">' + a + '</span>' : '<span class="off">' + b + '</span>';
-  let h = '<b>DEBUG</b> (F3 oculta · K completa la plataforma más cercana)\n';
+  let h = '<b>DEBUG</b> (F3 oculta · K completa la plataforma más cercana · O abre el segundo mapa)\n';
   h += 'estado: <b>' + f.estado + '</b>   mouse capturado: ' + yn(f.mouseCapturado) + (f.modoSinCaptura ? '  <span class="warn">modo flechas</span>' : '') + '   t=' + fmtTime(f.tiempoJugado) + '\n';
   f.vacas.forEach(v => { h += 'Vaquita ' + v.n + ' (' + v.nombre.replace('Vaca ', '') + '): ' + yn(v.completada, 'COMPLETADA', 'pendiente') + '  celdas ' + v.celdasCorrectas + '/' + v.celdas + (v.celdasEquivocadas ? ' <span class="warn">(' + v.celdasEquivocadas + ' mal)</span>' : '')
     + '  crono: ' + (v.completada ? (v.tiempoFinal == null ? 's/d' : v.tiempoFinal >= 999 ? 'K (999)' : fmtTime(v.tiempoFinal)) : v.cronometroIniciado ? '<span class="on">' + fmtTime(v.cronometro) + '…</span>' : '<span class="off">sin iniciar</span>')

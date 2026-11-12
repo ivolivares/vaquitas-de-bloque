@@ -10,7 +10,7 @@ const SITE = 'https://vaquitas-de-bloque.vercel.app';
 /* cada edición tiene su página con su propia imagen de vista previa */
 function shareUrl(){ const ed = bestEdition(); return ed === 'clasico' ? SITE + '/' : SITE + '/premio/' + ed; }
 /* tiempo total; si la partida es de antes de que se guardara, suma los tiempos de las tres vacas */
-function totalTime(){ if (GS.totalTime != null && GS.totalTime < 3600) return GS.totalTime; const ts = plats.map(p => p.time); return ts.every(t => typeof t === 'number' && t < 999) ? ts.reduce((a, b) => a + b, 0) : null; }
+function totalTime(){ if (GS.totalTime != null && GS.totalTime < 3600) return GS.totalTime; const ts = plats.slice(0, 3).map(p => p.time); return ts.every(t => typeof t === 'number' && t < 999) ? ts.reduce((a, b) => a + b, 0) : null; }
 function shareText(emoji){ const ed = bestEdition(), t = totalTime();
   return '¡Armé las 3 vaquitas' + (t != null ? ' en ' + fmtTime(t) : '') + (GS.mode === 'aventura' && GS.diff !== 'facil' ? ' en modo ' + GS.diff : '') + ' y gané el Ternerito Dorado' + (ed !== 'clasico' ? ', ' + EDITIONS[ed].label : '') + '!' + (emoji ? ' 🐄' : '') + ' ¿Puedes superarme?'; }
 const enc = encodeURIComponent;

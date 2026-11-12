@@ -9,7 +9,7 @@ const SEMI = { C:0, 'C#':1, Db:1, D:2, 'D#':3, Eb:3, E:4, F:5, 'F#':6, G:7, 'G#'
 const hz = n => { const m = /^([A-G][#b]?)(\d)$/.exec(n); return 440 * Math.pow(2, (SEMI[m[1]] + (m[2] - 4)*12 - 9)/12); };
 const CH = { C:['C3','E3','G3'], Am:['A2','C3','E3'], F:['F2','A2','C3'], G:['G2','B2','D3'], D:['D3','F#3','A3'], Em:['E2','G2','B2'], Dm:['D3','F3','A3'], Bb:['Bb2','D3','F3'], Gm:['G2','Bb2','D3'], A:['A2','C#3','E3'], E:['E2','G#2','B2'] };
 /* Cada compás tiene 8 corcheas. En la melodía: nota = ataque, "." = sostiene la anterior, "-" = silencio. */
-const T = (name, o) => Object.assign({ name, swing:0, lead:'square', leadVol:0.05, cutoff:2000, arp:true, drums:'soft', bass:'walk' }, o, { mel:o.mel.map(b => b.split(' ')), chords:o.chords.map(c => c.split(' ')) });
+const T = (name, o) => Object.assign({ name, w:1, swing:0, lead:'square', leadVol:0.05, cutoff:2000, arp:true, drums:'soft', bass:'walk' }, o, { mel:o.mel.map(b => b.split(' ')), chords:o.chords.map(c => c.split(' ')) });
 const DAY_TRACKS = [
   T('Pradera', { bpm:104, swing:0.1, chords:['C','Am','F','G','C','Am','F G','C'], mel:[
     'E5 . G5 . C6 . G5 .', 'A5 . G5 E5 . . C5 .', 'F5 . A5 . C6 . A5 .', 'G5 . F5 D5 . . G4 .',
@@ -23,6 +23,15 @@ const DAY_TRACKS = [
   T('Establo', { bpm:108, swing:0.16, drums:'bounce', chords:['D','G','D','A','D','G','A','D'], mel:[
     'F#5 . A5 F#5 D5 . F#5 .', 'G5 . B5 G5 D5 . G5 .', 'A5 . F#5 . D5 E5 F#5 .', 'E5 . C#5 . A4 . E5 .',
     'F#5 A5 D6 . A5 . F#5 .', 'B5 . G5 . E5 G5 B5 .', 'A5 G5 E5 C#5 . E5 A5 .', 'D5 . . . F#5 . D5 .'] }),
+];
+/* segundo mapa: aires de corte y de torneo, en modos antiguos */
+const CASTLE_TRACKS = [
+  T('Reino de piedra', { w:2, bpm:96, lead:'triangle', leadVol:0.11, cutoff:3000, chords:['Dm','C','Dm','Am','F','C','Dm','Dm'], mel:[
+    'D5 . F5 . A5 . G5 F5', 'E5 . G5 . C5 . E5 .', 'D5 . A4 . D5 E5 F5 .', 'E5 . C5 . A4 . . .',
+    'F5 . A5 . C6 . A5 .', 'G5 . E5 . C5 . E5 G5', 'F5 E5 D5 . A4 . C5 E5', 'D5 . . . - - - -'] }),
+  T('Torneo', { w:2, bpm:108, swing:0.12, drums:'bounce', chords:['Am','G','Am','Em','C','G','Em','Am'], mel:[
+    'A4 . C5 . E5 . C5 A4', 'B4 . D5 . G5 . D5 .', 'A4 C5 E5 A5 . G5 E5 .', 'G5 . E5 . B4 . . .',
+    'C5 . E5 . G5 . E5 C5', 'B4 . D5 . G5 . B5 .', 'G5 . E5 . B4 . E5 G5', 'A5 . . . E5 . A4 .'] }),
 ];
 const NIGHT_TRACK = T('Vienen los cuatreros', { bpm:126, lead:'sawtooth', leadVol:0.04, cutoff:1400, arp:false, drums:'night', bass:'pulse', chords:['Am','Am','F','E','Am','Dm','E','Am'], mel:[
   'A4 - C5 - E5 - C5 -', 'A4 - C5 - E5 . D#5 .', 'F4 - A4 - C5 - A4 -', 'E4 - G#4 - B4 . . .',
@@ -54,12 +63,12 @@ function schedule(tr, b, s, t){
   else if (tr.drums === 'bounce'){ if (s === 0 || s === 4 || (s === 3 && b % 2)) kick(t, 0.24); if (s === 2 || s === 6) hit(t, 0.09, 0.05, 'bandpass', 1800); if (s % 2 === 1) hit(t, 0.03, 0.03, 'highpass', 7000); }
   else if (tr.drums === 'night'){ if (s % 2 === 0) kick(t, 0.26); hit(t, 0.025, s % 2 ? 0.035 : 0.02, 'highpass', 8000); if (s === 6 && b % 2) hit(t, 0.12, 0.06, 'bandpass', 1400); }
 }
-function pickTrack(){ if (isTense()) return NIGHT_TRACK; let i; do { i = Math.floor(Math.random()*DAY_TRACKS.length); } while (i === lastDay); lastDay = i; return DAY_TRACKS[i]; }
+function pickTrack(){ if (isTense()) return NIGHT_TRACK; const list = GS.world === 2 ? CASTLE_TRACKS : DAY_TRACKS; let i; do { i = Math.floor(Math.random()*list.length); } while (i === lastDay); lastDay = i; return list[i]; }
 function tick(){
   if (!GS.musicOn || !ensure() || ctx.state !== 'running' || document.hidden){ nextT = 0; return; }
   const now = ctx.currentTime; if (nextT < now + 0.03){ const first = nextT === 0; nextT = now + 0.08; if (first) st = 0; }
   while (nextT < now + 0.6){
-    if (st === 0 && (!cur || (cur === NIGHT_TRACK) !== isTense() || (bar === 0 && loops >= 2))){ cur = pickTrack(); bar = 0; loops = 0; }
+    if (st === 0 && (!cur || (cur === NIGHT_TRACK) !== isTense() || (cur !== NIGHT_TRACK && cur.w !== GS.world) || (bar === 0 && loops >= 2))){ cur = pickTrack(); bar = 0; loops = 0; }
     const sd = 30/cur.bpm; schedule(cur, bar, st, nextT + (st % 2 ? cur.swing*sd : 0)); nextT += sd;
     if (++st === 8){ st = 0; if (++bar === 8){ bar = 0; loops++; } }
   }

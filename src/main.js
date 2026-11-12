@@ -22,6 +22,8 @@ import { LATE } from './state.js';
 import { bkey, placed } from './world.js';
 import './touch.js';
 import './share.js';
+import './records.js';
+import { setWorld, updatePortal } from './portal.js';
 import { DEBUG, GS } from './state.js';
 import { $ } from './util.js';
 import { dirty, getB, hmap, isProtected, setB } from './world.js';
@@ -31,14 +33,15 @@ import { loadSave } from './save.js';
 import { aim, dirV, eyeV, keys, player, raycastGrid, syncCamera, updatePlayer } from './player.js';
 import { badMat, evalPlatform, ghostMat, markDone, okMat, plats, registerCells, updatePlatAnim, setTemplate } from './platforms.js';
 import { cows, spawnCow, updateCow } from './cows.js';
-import { actBreak, actPlace, debugComplete, updateTarget } from './actions.js';
+import { actBreak, actPlace, debugComplete, updateTarget, HOTBAR } from './actions.js';
 import { buildPlush, orbit, prizeCam, prizeScene } from './prize.js';
 import { enterPrize, selectSlot, setState, showWin, state, updateCounter } from './ui.js';
 import { debugFlags, updateDebug } from './debug.js';
 
 setTemplate('base');
 (function restore(){ const s = loadSave();
-  if (s){ plats.forEach((p, i) => { if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; if (['facil', 'dificil', 'legendario'].includes(s.diff)) GS.diff = s.diff; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
+  if (s && s.world === 2) setWorld(2, false);
+  if (s){ GS.crown = !!s.crown; plats.forEach((p, i) => { if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.slice(0, 3).every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; if (['facil', 'dificil', 'legendario'].includes(s.diff)) GS.diff = s.diff; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
   plats.forEach(p => evalPlatform(p, null)); GS.saveReady = true; updateCounter(); setMuted(GS.muted); adv.applyDifficulty(); refreshMusicUI(); setState('start'); })();
 syncCamera();
 export let last = performance.now(), fpsAcc = 0, fpsN = 0;
@@ -48,7 +51,7 @@ export function frame(now){
   updateDebug(dt);
   if (state === 'prize'){ orbit.update(); renderer.render(prizeScene, prizeCam); return; }
   if (state === 'play'){
-    GS.playTime += dt; updatePlayer(dt); for (const c of cows) updateCow(c, dt); for (const p of plats) if (p.anim) updatePlatAnim(p, dt); updateParticles(dt); updateAdventure(dt); collideCharacters(); updateTarget();
+    GS.playTime += dt; updatePlayer(dt); for (const c of cows) updateCow(c, dt); for (const p of plats) if (p.anim) updatePlatAnim(p, dt); updateParticles(dt); updateAdventure(dt); updatePortal(dt); collideCharacters(); updateTarget();
     if (GS.winAt != null && GS.playTime >= GS.winAt){ GS.winAt = null; showWin(); }
     if (DEBUG){ fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5){ $('fps').textContent = Math.round(fpsN/fpsAcc) + ' fps'; fpsAcc = 0; fpsN = 0; } }
   }
@@ -59,4 +62,4 @@ export function frame(now){
 }
 requestAnimationFrame(frame);
 
-if (DEBUG) window.__vq = { GS, adv, placed, bkey, musicInfo, shareInfo: LATE.shareInfo, flags: debugFlags, player, plats, cows, keys, getB, setB, actBreak, actPlace, debugComplete, enterPrize, selectSlot, raycastGrid, aim, eyeV, dirV, hmap, isProtected, buildPlush, renderer, chunkMesh, get state(){ return state; }, get playTime(){ return GS.playTime; }, get prizeUnlocked(){ return GS.prizeUnlocked; } };
+if (DEBUG) window.__vq = { GS, adv, placed, bkey, setWorld, HOTBAR, musicInfo, shareInfo: LATE.shareInfo, flags: debugFlags, player, plats, cows, keys, getB, setB, actBreak, actPlace, debugComplete, enterPrize, selectSlot, raycastGrid, aim, eyeV, dirV, hmap, isProtected, buildPlush, renderer, chunkMesh, get state(){ return state; }, get playTime(){ return GS.playTime; }, get prizeUnlocked(){ return GS.prizeUnlocked; } };

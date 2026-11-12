@@ -1,13 +1,13 @@
 /* AVENTURA: ciclo de día y noche, cuatreros, corrales y tips */
 import * as THREE from 'three';
-import { DEBUG, GS, late } from './state.js';
+import { DEBUG, GS, LATE, late } from './state.js';
 import { $, fmtTime, hash2, pxTex } from './util.js';
 import { B, WY } from './blocks.js';
-import { bkey, getB, hmap, inWorld, PLAT_POS, placed, setB } from './world.js';
+import { bkey, foreign, getB, hmap, inWorld, isProtected, PLAT_POS, placed, setB } from './world.js';
 import { burst, chunkMat, clouds, scene, sky, spawnP, sunLight, TEX } from './render.js';
 import { sndCrunch, sndGood, sndMoo, sndPop, tone } from './audio.js';
 import { writeSave } from './save.js';
-import { boxHits, dirV, eyeV, HW, PH, player } from './player.js';
+import { boxHits, cellMap, dirV, eyeV, HW, PH, player } from './player.js';
 import { plats, setTemplate } from './platforms.js';
 import { HOTBAR } from './actions.js';
 import { COW_DEFS, cows, raycaster, walkableY } from './cows.js';
@@ -18,14 +18,14 @@ const WARN = 30;
 /* dificultades del modo aventura */
 export const DIFFS = {
   facil:      { label:'fácil',      day:95, night:65, perNight:(n, free) => Math.min(free, 2), maxActive:3, stun:4, stunCd:0, limited:false, breakers:false, big:false, aids:true,  moveCorral:false },
-  dificil:    { label:'difícil',    day:70, night:90, perNight:(n, free) => free ? Math.min(n, 4) : 0, maxActive:6, stun:2, stunCd:6, limited:true, breakers:true, big:false, aids:true,  moveCorral:false },
-  legendario: { label:'legendario', day:60, night:95, perNight:(n, free) => free ? Math.min(n + 1, 5) : 0, maxActive:7, stun:2, stunCd:7, limited:true, breakers:true, big:true,  aids:false, moveCorral:true },
+  dificil:    { label:'difícil',    day:70, night:90, perNight:(n, free) => free ? Math.min(n, 4) : 0, maxActive:6, stun:2, stunCd:6, limited:true, breakers:true, big:false, aids:true,  moveCorral:false, recover:30 },
+  legendario: { label:'legendario', day:60, night:95, perNight:(n, free) => free ? Math.min(n + 1, 5) : 0, maxActive:7, stun:2, stunCd:7, limited:true, breakers:true, big:true,  aids:false, moveCorral:true, recover:20, dig:true, earnFur:true },
 };
 const CFG = () => (GS.mode === 'aventura' && DIFFS[GS.diff]) || DIFFS.facil;
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 let started = false, phase = 'day', clock = 0, warned = false, nights = 0, trappedN = 0;
-let troubleT = 0, tipT = 0, tipI = 0, uiT = 0, stunHintShown = false;
+let digTold = false, truceT = 0, troubleT = 0, tipT = 0, tipI = 0, uiT = 0, stunHintShown = false;
 export const cuatreros = [];
 export const corrals = [];
 
@@ -40,6 +40,7 @@ const starMat = new THREE.PointsMaterial({ color:0xffffff, size:2.2, sizeAttenua
 (function buildStars(){ const n = 260, pos = new Float32Array(n*3); for (let i = 0; i < n; i++){ const a = hash2(i, 1, 501)*Math.PI*2, e = 0.12 + hash2(i, 2, 502)*1.35; pos[i*3] = Math.cos(a)*Math.cos(e)*280; pos[i*3+1] = Math.sin(e)*280; pos[i*3+2] = Math.sin(a)*Math.cos(e)*280; }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const p = new THREE.Points(g, starMat); p.frustumCulled = false; sky.add(p); })();
 let lastLight = -1;
+export function setSkyTheme(w){ if (w === 2){ COL.fogDay.set(0xf0d2b4); COL.white.setRGB(1, 0.89, 0.78); } else { COL.fogDay.set(0xd4ecf7); COL.white.setRGB(1, 1, 1); } lastLight = -1; }
 function applyLight(d){
   if (Math.abs(d - lastLight) < 0.004) return; lastLight = d; GS.daylight = d;
   scene.fog.color.copy(COL.fogNight).lerp(COL.fogDay, d); scene.background.copy(scene.fog.color);
@@ -84,7 +85,7 @@ function buildCuatrero(ci, breaker){
    --------------------------------------------------------------------- */
 const stepY = (x, z, fy) => walkableY(x + 0.5, z + 0.5, fy);
 /* como stepY, pero haciendo como si los bloques puestos no existieran (para el cuatrero que rompe cercas) */
-const gB = (x, y, z) => placed.has(bkey(x, y, z)) ? 0 : getB(x, y, z);
+const gB = (x, y, z) => (placed.has(bkey(x, y, z)) && !cellMap.has(bkey(x, y, z))) ? 0 : getB(x, y, z);   // los bloques de un holograma no se tocan
 function stepRelax(x, z, fy){ if (x < 1 || x >= 63 || z < 1 || z >= 63) return null; for (const gy of [fy + 1, fy, fy - 1, fy - 2]){ if (gy < 1 || gB(x, gy - 1, z) === 0) continue; let clear = true; for (let y = gy; y <= Math.max(gy, fy) + 1; y++) if (gB(x, y, z) !== 0){ clear = false; break; } if (clear) return gy; } return null; }
 function bfs(sx, sz, sgy, isGoal, limit = 1800, relax = false){ const step = relax ? stepRelax : stepY;
   const par = new Map(), gyOf = new Map(), dist = new Map(), q = [[sx, sz]], k0 = sx + sz*64; par.set(k0, -1); gyOf.set(k0, sgy); dist.set(k0, 0);
@@ -131,7 +132,7 @@ function makeCorral(cow, cx, cz, gy, high){
   for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++){ if (Math.max(Math.abs(dx), Math.abs(dz)) !== 2) continue; const x = cx + dx, z = cz + dz, g = stepY(x, z, gy) ?? gy, ys = [];
     for (let k = 0; k < (high ? 2 : 1); k++){ const y = g + k; if (!inWorld(x, y, z) || y >= WY || getB(x, y, z) !== 0) continue;
       if (player.x - HW < x + 1 && player.x + HW > x && player.y < y + 1 && player.y + PH > y && player.z - HW < z + 1 && player.z + HW > z) continue;   // nunca sobre el jugador
-      setB(x, y, z, B.WOOD); placed.add(bkey(x, y, z)); ys.push(y); }
+      setB(x, y, z, B.WOOD); placed.add(bkey(x, y, z)); foreign.add(bkey(x, y, z)); ys.push(y); }
     if (ys.length) cols.push({ x, z, ys }); }
   const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color:0xff4a3a, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false })); beam.position.set(cx + 0.5, gy + 31.5, cz + 0.5); beam.visible = CFG().aids; scene.add(beam);
   const corral = { cols, cow, cx, cz, gy, beam }; corrals.push(corral);
@@ -168,20 +169,25 @@ function freeCow(cow, quiet){
    Comportamiento del cuatrero
    --------------------------------------------------------------------- */
 /* encerrado: no tiene salida a su mismo nivel o hacia abajo, y al menos un lado lo cierra un bloque puesto (o está totalmente tapiado) */
-function isTrapped(u){ const cx = Math.floor(u.x), cz = Math.floor(u.z); let hard = 0, byBlock = false;
-  for (const [dx, dz] of DIRS){ const g = stepY(cx + dx, cz + dz, u.gy); if (g != null && g <= u.gy) return false; if (g == null) hard++; if (placed.has(bkey(cx + dx, u.gy, cz + dz))) byBlock = true; }
-  return hard === 4 || byBlock; }
+function trapState(u){ const cx = Math.floor(u.x), cz = Math.floor(u.z); let hard = 0, byBlock = false; const natural = [];
+  for (const [dx, dz] of DIRS){ const x = cx + dx, z = cz + dz, g = stepY(x, z, u.gy); if (g != null && g <= u.gy) return null; if (g == null){ hard++; if (stepRelax(x, z, u.gy) == null) natural.push([x, z]); } if (placed.has(bkey(x, u.gy, z))) byBlock = true; }
+  if (!(hard === 4 || byBlock)) return null;
+  if (CFG().dig && natural.length){   // legendario: si algún lado es terreno natural, cava una escalera y sale
+    if (!awake()) return null;
+    for (const [x, z] of natural){ if (x < 2 || x > 61 || z < 2 || z > 61) continue; const ys = [u.gy + 1, u.gy + 2]; if (ys.some(y => y >= WY || isProtected(x, y, z) || placed.has(bkey(x, y, z)))) continue; return { dig: ys.filter(y => getB(x, y, z) !== 0).map(y => ({ x, y, z, t:1.6 })) }; }
+  }
+  return { trapped:true }; }
 function popCuatrero(u){
   const cx = Math.floor(u.x), cz = Math.floor(u.z);
   for (const [dx, dz] of DIRS) for (let dy = 0; dy <= 1; dy++){ const x = cx + dx, y = u.gy + dy, z = cz + dz; if (placed.has(bkey(x, y, z)) && getB(x, y, z) !== 0){ setB(x, y, z, 0); placed.delete(bkey(x, y, z)); burst(TEX.sq, x + 0.5, y + 0.5, z + 0.5, 6, 2.4, 0xc8935a, 0.16, 10, 0.6); } }
   burst(TEX.spark, u.x, u.y + 1, u.z, 30, 4, () => [0xffffff, 0xffd27a, 0xff8a6a][Math.floor(Math.random()*3)], 0.3, 5, 1); sndPoof(); sndGood();
-  const cow = u.cow; removeCuatrero(u); trappedN++; if (cow) freeCow(cow); if (GS.inv){ GS.inv[2] += 6; refreshInv(); } toast(GS.inv ? '¡Atrapaste al cuatrero! Dejó 6 bloques de madera.' : '¡Atrapaste al cuatrero! Se rindió y se fue.'); refreshCounter(); tryWin();
+  const cow = u.cow; removeCuatrero(u); trappedN++; if (cow) freeCow(cow); let fur = null; if (GS.inv){ GS.inv[2] += 6; if (CFG().earnFur) fur = grantFur(); refreshInv(); } toast(fur ? '¡Atrapaste al cuatrero! Dejó madera y pelaje para tu ' + fur.V.name + '.' : GS.inv ? '¡Atrapaste al cuatrero! Dejó 6 bloques de madera.' : '¡Atrapaste al cuatrero! Se rindió y se fue.'); refreshCounter(); tryWin();
 }
 function follow(u, speed, dt){
   if (!u.path.length) return false; const [tx, tz] = u.path[0], dx = tx + 0.5 - u.x, dz = tz + 0.5 - u.z, d = Math.hypot(dx, dz);
   if (d < 0.1){ u.path.shift(); return true; }
   if (Math.floor(u.x) !== tx || Math.floor(u.z) !== tz){ if (stepY(tx, tz, u.gy) == null){
-    if (u.breaker && u.state === 'seek'){ for (const y of [u.gy, u.gy + 1]) if (placed.has(bkey(tx, y, tz)) && getB(tx, y, tz) !== 0){ u.brk = { x:tx, y, z:tz, t:2.6 }; return false; } }   // le estorba un bloque puesto: lo rompe
+    if (u.breaker && u.state === 'seek'){ for (const y of [u.gy, u.gy + 1]) if (placed.has(bkey(tx, y, tz)) && !cellMap.has(bkey(tx, y, tz)) && getB(tx, y, tz) !== 0){ u.brk = { x:tx, y, z:tz, t:2.6 }; return false; } }   // le estorba un bloque puesto: lo rompe
     u.path = []; u.rp = 0; return false; } }   // el camino cambió
   const st = Math.min(d, speed*dt); u.x += dx/d*st; u.z += dz/d*st; const g = walkableY(u.x, u.z, u.gy); if (g != null) u.gy = g;
   let dr = Math.atan2(dx, dz) - u.rot; while (dr > Math.PI) dr -= Math.PI*2; while (dr < -Math.PI) dr += Math.PI*2; u.rot += Math.max(-7*dt, Math.min(7*dt, dr)); u.phase += dt*speed*5.5; u.moving = true; return true;
@@ -194,9 +200,15 @@ function updateCuatrero(u, dt){
   if (getB(bx, u.gy, bz) !== 0){ let y = u.gy; while (y < WY - 1 && getB(bx, y, bz) !== 0) y++; u.gy = y; } else if (getB(bx, u.gy - 1, bz) === 0){ let y = u.gy; while (y > 1 && getB(bx, y - 1, bz) === 0) y--; u.gy = y; }
   if (u.state === 'trapped'){ u.t -= dt; if (u.t <= 0){ popCuatrero(u); return; } }
   else {
-    u.chk -= dt; if (u.chk <= 0){ u.chk = 0.3; if (isTrapped(u)){ u.state = 'trapped'; u.t = 1.6; u.path = []; sndStun(); toast('¡El cuatrero quedó encerrado!'); } }
+    u.chk -= dt; if (u.chk <= 0 && !u.digq){ u.chk = 0.3; const ts = trapState(u); if (ts && ts.trapped){ u.state = 'trapped'; u.t = 1.6; u.path = []; sndStun(); toast('¡El cuatrero quedó encerrado!'); }
+      else if (ts && ts.dig){ u.digq = ts.dig; u.path = []; u.brk = null; if (!digTold){ digTold = true; toast('¡Los cuatreros legendarios cavan para salir! Enciérralos con tus propios bloques.'); } } }
     if (u.state !== 'trapped' && u.stun > 0){ u.stun -= dt; if (Math.random() < dt*6) spawnP(TEX.spark, u.x + (Math.random() - 0.5)*0.7, u.y + 2 + Math.random()*0.2, u.z + (Math.random() - 0.5)*0.7, 0, 0.3, 0, 0.5, 0.2, 0xffe36a); }
     else if (u.state === 'sleep'){ if (awake()) u.state = 'seek'; u.zz -= dt; if (u.zz <= 0){ u.zz = 1.1; spawnP(TEX.sq, u.x + 0.2, u.y + 2, u.z, 0.15, 0.5, 0, 1.4, 0.16, 0xbfd4ff); } }
+    else if (u.digq){   // cavando para salir de un hoyo
+      const b = u.digq[0]; if (!b){ u.digq = null; u.rp = 0; }
+      else { b.t -= dt; u.rot = Math.atan2(b.x + 0.5 - u.x, b.z + 0.5 - u.z); u.phase += dt*16; u.hitting = true; if (Math.random() < dt*5){ burst(TEX.sq, b.x + 0.5, b.y + 0.5, b.z + 0.5, 2, 1.6, 0x9a8a78, 0.13, 9, 0.4); tone('square', 150, 100, 0.05, 0.08); }
+        if (getB(b.x, b.y, b.z) === 0) u.digq.shift(); else if (b.t <= 0){ setB(b.x, b.y, b.z, 0); placed.delete(bkey(b.x, b.y, b.z)); burst(TEX.sq, b.x + 0.5, b.y + 0.5, b.z + 0.5, 10, 2.4, 0x9a8a78, 0.16, 10, 0.6); sndCrunch(); u.digq.shift(); } }
+    }
     else if (u.brk){   // rompiendo una cerca
       const b = u.brk; b.t -= dt; u.rot = Math.atan2(b.x + 0.5 - u.x, b.z + 0.5 - u.z); u.phase += dt*16; u.hitting = true;
       if (Math.random() < dt*5){ burst(TEX.sq, b.x + 0.5, b.y + 0.5, b.z + 0.5, 2, 1.6, 0xc8935a, 0.13, 9, 0.4); tone('square', 180, 120, 0.05, 0.08); }
@@ -270,28 +282,36 @@ export function hitCuatrero(maxT){
 function startNight(){
   phase = 'night'; clock = 0; nights++; sndNight();
   const cfg = CFG(); let moved = 0; if (cfg.moveCorral) corrals.slice().forEach(c => { if (relocateCorral(c)) moved++; });
-  const fc = freeCows(), n = Math.min(cfg.perNight(nights, fc.length), cfg.maxActive - cuatreros.length); let made = 0;
+  const mult = GS.world === 2 && GS.diff !== 'facil' ? 1.5 : 1;   // el Reino de Piedra es más peligroso en difícil y legendario
+  const fc = freeCows(), n = Math.min(Math.ceil(cfg.perNight(nights, fc.length)*mult), Math.min(10, Math.ceil(cfg.maxActive*mult)) - cuatreros.length); let made = 0;
   for (let i = 0; i < n; i++) if (spawnCuatrero(fc[i % fc.length], cfg.breakers && i === 0)) made++;
   cuatreros.forEach(u => { if (u.state === 'sleep') u.state = 'seek'; });
   toast((cuatreros.length ? (made > 1 ? '¡Es de noche! Llegaron ' + made + ' cuatreros.' : made === 1 ? '¡Es de noche! Llegó un cuatrero.' : '¡Es de noche! Los cuatreros despertaron.') : 'Noche tranquila: no hay vacas que robar.') + (moved ? ' Mudaron a tu vaca a un corral más lejano y reforzado.' : ''));
 }
 function startDay(){ phase = 'day'; clock = 0; warned = false; sndDawn(); toast(cuatreros.length ? '¡Amaneció! Los cuatreros duermen: es el momento de encerrarlos.' : '¡Amaneció!'); }
-function clearAdventure(){ cuatreros.slice().forEach(u => { burst(TEX.spark, u.x, u.y + 1, u.z, 12, 3, 0xffffff, 0.25, 4, 0.7); removeCuatrero(u); }); cows.forEach(c => { if (c.held) freeCow(c, true); }); corrals.slice().forEach(dropCorral); started = false; phase = 'day'; clock = 0; warned = false; troubleT = 0; $('tip').classList.add('hidden'); refreshCounter(); }
+export function startTruce(sec){ clearAdventure(); truceT = sec; }
+export function clearAdventure(){ cuatreros.slice().forEach(u => { burst(TEX.spark, u.x, u.y + 1, u.z, 12, 3, 0xffffff, 0.25, 4, 0.7); removeCuatrero(u); }); cows.forEach(c => { if (c.held) freeCow(c, true); }); corrals.slice().forEach(dropCorral); started = false; phase = 'day'; clock = 0; warned = false; troubleT = 0; $('tip').classList.add('hidden'); refreshCounter(); }
 export function isTense(){ return GS.mode === 'aventura' && !GS.prizeUnlocked && phase === 'night' && cuatreros.length > 0; }
 /* se gana con las 3 vacas armadas y ninguna robada */
 export function tryWin(){
-  if (GS.prizeUnlocked || !plats.every(p => p.done) || plats.some(p => p.anim)) return;
+  if (GS.prizeUnlocked || !plats.slice(0, 3).every(p => p.done) || plats.some(p => p.anim)) return;
   if (cows.some(c => c.held)){ toast('¡Ya armaste las 3! Rescata a tus vacas robadas para ganar.'); return; }
-  GS.prizeUnlocked = true; GS.totalTime = GS.playTime; $('btnPrizePause').classList.remove('hidden'); clearAdventure(); writeSave(); GS.winAt = GS.playTime + 1.8;
+  GS.prizeUnlocked = true; GS.totalTime = GS.playTime; if (GS.mode === 'aventura' && GS.diff === 'legendario') GS.crown = true; GS.newRecord = LATE.submitRecord ? LATE.submitRecord() : false; $('btnPrizePause').classList.remove('hidden'); clearAdventure(); writeSave(); GS.winAt = GS.playTime + 1.8;
 }
 export function setMode(m){ if (m !== GS.mode){ GS.mode = m; if (m === 'libre') clearAdventure(); writeSave(); } applyDifficulty(); }
 export function setDifficulty(d){ if (!DIFFS[d]) return; if (d !== GS.diff){ GS.diff = d; clearAdventure(); writeSave(); } applyDifficulty(); }
 /* bloques contados: los pelajes justos para las vacas que faltan (más 2 de repuesto) y pocos bloques de construcción */
-function initialInv(){ const need = HOTBAR.map(() => 0); plats.forEach(p => { if (!p.done) p.cells.forEach(c => { const k = HOTBAR.indexOf(c.mat); if (k >= 0) need[k]++; }); });
-  return HOTBAR.map((id, k) => k === 0 ? 10 : k === 1 ? 6 : k === 2 ? 6 + need[k] : (need[k] ? need[k] + 2 : 0)); }
-export function refreshInv(){ [...$('hotbar').children].forEach((el, k) => { let c = el.querySelector('.cnt'); if (!c){ c = document.createElement('em'); c.className = 'cnt'; el.append(c); } c.textContent = GS.inv ? GS.inv[k] : ''; el.classList.toggle('empty', !!GS.inv && GS.inv[k] <= 0); }); }
+function needOf(p){ const n = HOTBAR.map(() => 0); p.cells.forEach(c => { if (c.state !== 1){ const k = HOTBAR.indexOf(c.mat); if (k >= 0) n[k]++; } }); return n; }
+function initialInv(cfg){ const open = plats.filter(p => !p.done), all = HOTBAR.map(() => 0); open.forEach(p => needOf(p).forEach((v, k) => { all[k] += v; }));
+  const first = open[0] ? needOf(open[0]) : all.map(() => 0);   // legendario: pelaje solo para la primera vaca; el resto lo sueltan los cuatreros
+  return HOTBAR.map((id, k) => k === 0 ? 10 : k === 1 ? 6 : k === 2 ? 6 + all[k] : cfg.earnFur ? (first[k] ? first[k] + 2 : 0) : (all[k] ? all[k] + 2 : 0)); }
+/* cada cuatrero atrapado suelta cerca de la mitad del pelaje de la próxima vaca a la que le falte material */
+function grantFur(){ for (const p of plats){ if (p.done) continue; const need = needOf(p); let short = false; for (let k = 3; k < need.length; k++) if (need[k] > GS.inv[k]) short = true; if (!short) continue;
+    for (let k = 3; k < need.length; k++) if (need[k] > GS.inv[k]){ const tot = p.cells.filter(c => c.mat === HOTBAR[k]).length; GS.inv[k] += Math.min(need[k] - GS.inv[k] + 1, Math.ceil(tot/2) + 1); } return p; } return null; }
+export function refreshInv(){ [...$('hotbar').children].forEach((el, k) => { let c = el.querySelector('.cnt'); if (!c){ c = document.createElement('em'); c.className = 'cnt'; el.append(c); } c.textContent = GS.inv ? GS.inv[k] : ''; el.classList.toggle('empty', !!GS.inv && GS.inv[k] <= 0); });
+  const r = $('recover'); r.classList.toggle('hidden', GS.recover == null); if (GS.recover != null) r.textContent = '⛏ Puedes recuperar ' + GS.recover + ' bloques del terreno'; }
 export function applyDifficulty(){ const adv = GS.mode === 'aventura', cfg = CFG();
-  setTemplate(adv && cfg.big ? 'big' : 'base'); GS.noAids = adv && !cfg.aids; GS.inv = adv && cfg.limited ? initialInv() : null; corrals.forEach(c => { c.beam.visible = cfg.aids; }); refreshInv(); refreshModeUI(); }
+  setTemplate(adv && cfg.big ? 'big' : 'base'); GS.noAids = adv && !cfg.aids; GS.inv = adv && cfg.limited ? initialInv(cfg) : null; GS.recover = adv && cfg.limited ? cfg.recover : null; corrals.forEach(c => { c.beam.visible = cfg.aids; }); refreshInv(); refreshModeUI(); }
 export function refreshModeUI(){ $('btnMode').textContent = 'Modo: ' + (GS.mode === 'aventura' ? 'aventura (' + CFG().label + ')' : 'libre'); if (GS.mode !== 'aventura') $('dial').classList.add('hidden');
   document.querySelectorAll('.diff').forEach(b => b.classList.toggle('sel', b.dataset.d === GS.diff)); }
 $('btnMode').onclick = () => setMode(GS.mode === 'aventura' ? 'libre' : 'aventura');
@@ -313,6 +333,8 @@ const TIPS = {
 export function updateAdventure(dt){
   const on = GS.mode === 'aventura' && !GS.prizeUnlocked;
   if (!on){ applyLight(Math.min(1, GS.daylight + dt*0.5)); return; }
+  if (truceT > 0){ truceT -= dt; applyLight(1); const dial = $('dial'); dial.classList.remove('hidden', 'night', 'warn'); dial.textContent = '🕊 Tregua: los cuatreros vuelven en ' + fmtTime(truceT);
+    if (truceT <= 0) toast('Se acabó la tregua. ¡Cuidado con los cuatreros!'); return; }
   if (!started && cows.length){ started = true; phase = 'day'; clock = 0; warned = false; toast('¡Tu primera vaca! Cuidado: de noche salen los cuatreros.'); }
   let d = 1, rem = 0;
   if (started){
@@ -335,7 +357,7 @@ export function updateAdventure(dt){
 
 /* panel de debug */
 export function advFlags(){ return { modo:GS.mode, iniciado:started, fase:phase, reloj:clock, faltan:started ? (phase === 'day' ? CFG().day : CFG().night) - clock : null, noches:nights, luz:GS.daylight, cuatreros:cuatreros.map(u => ({ estado:u.state, mareado:u.stun > 0, x:+u.x.toFixed(1), z:+u.z.toFixed(1), y:u.gy, llevaVaca:u.cow ? cowName(u.cow) : null, objetivo:u.target ? cowName(u.target) : null })), vacasRobadas:cows.filter(c => c.held).map(cowName), corrales:corrals.length, atrapados:trappedN, problemaHace:troubleT }; }
-export function advDebug(){ const f = advFlags(); let h = 'modo: <b>' + f.modo + '</b>'; if (f.modo !== 'aventura') return h + '\n'; h += ' (<b>' + GS.diff + '</b>)' + (GS.inv ? '   bloques: ' + GS.inv.join(',') : '');
+export function advDebug(){ const f = advFlags(); let h = 'mundo: <b>' + GS.world + '</b>   modo: <b>' + f.modo + '</b>'; if (f.modo !== 'aventura') return h + '\n'; h += ' (<b>' + GS.diff + '</b>)' + (GS.inv ? '   bloques: ' + GS.inv.join(',') + '   recuperables: ' + GS.recover : '') + (truceT > 0 ? '   tregua: ' + fmtTime(truceT) : '');
   h += '   fase: <b>' + (f.iniciado ? f.fase : 'sin iniciar') + '</b>' + (f.faltan != null ? ' (cambia en ' + fmtTime(f.faltan) + ')' : '') + '   noches: ' + f.noches + '   (L = anochecer, J = amanecer)\n';
   h += 'cuatreros: <b>' + f.cuatreros.length + '</b>' + f.cuatreros.map(u => ' [' + u.estado + (u.mareado ? '*' : '') + (u.llevaVaca ? ' con ' + u.llevaVaca.replace('Vaca ', '') : '') + ' @' + u.x + ',' + u.z + ']').join('') + '   atrapados: ' + f.atrapados + '\n';
   h += 'vacas robadas: ' + (f.vacasRobadas.length ? '<span class="warn">' + f.vacasRobadas.join(', ') + '</span>' : '<span class="off">ninguna</span>') + '   corrales: ' + f.corrales + '   tips en: ' + (f.problemaHace > 0 ? Math.max(0, 60 - f.problemaHace).toFixed(0) + ' s' : '—') + '\n';

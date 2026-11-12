@@ -7,11 +7,11 @@ import { B } from './blocks.js';
 export const TILE = 16, PADPX = 8, CELL = 32, ATLAS_N = 4, ATLAS_PX = 128;
 export const atlasCanvas = mkCanvas(ATLAS_PX, ATLAS_PX); export const ag = atlasCanvas.getContext('2d'); ag.imageSmoothingEnabled = false;
 export const T = {}, tileCanvas = [], tileAvg = [];
-export function makeTile(name, fn){
-  const idx = tileCanvas.length; T[name] = idx;
-  const c = mkCanvas(16, 16), g = c.getContext('2d'), img = g.createImageData(16, 16); let ar = 0, agn = 0, ab = 0;
+export function makeTile(name, fn){   // si el nombre ya existe, lo redibuja en su mismo lugar (así se cambia de tema)
+  const fresh = !(name in T), idx = fresh ? tileCanvas.length : T[name]; T[name] = idx;
+  const c = fresh ? mkCanvas(16, 16) : tileCanvas[idx], g = c.getContext('2d'), img = g.createImageData(16, 16); let ar = 0, agn = 0, ab = 0;
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++){ const col = fn(x, y), i = (y*16 + x)*4; img.data[i] = col[0]; img.data[i+1] = col[1]; img.data[i+2] = col[2]; img.data[i+3] = 255; ar += col[0]; agn += col[1]; ab += col[2]; }
-  g.putImageData(img, 0, 0); tileCanvas.push(c); tileAvg.push([ar/256, agn/256, ab/256]);
+  g.putImageData(img, 0, 0); tileCanvas[idx] = c; tileAvg[idx] = [ar/256, agn/256, ab/256];
   const ax = (idx % ATLAS_N) * CELL, ay = Math.floor(idx / ATLAS_N) * CELL, P = PADPX;
   ag.drawImage(c, ax + P, ay + P);
   ag.drawImage(c, 0, 0, 1, 16, ax, ay + P, P, 16); ag.drawImage(c, 15, 0, 1, 16, ax + P + 16, ay + P, P, 16);
@@ -52,11 +52,29 @@ makeTile('brown', (x, y) => pick(PAL.brown, hash2(x, Math.floor((y + hash2(x,0,9
 makeTile('lavender', (x, y) => pick(PAL.lav, vnoise(x/3, y/3, 101)*0.7 + hash2(x,y,102)*0.3));
 makeTile('slate', (x, y) => { const r = Math.hypot(x-7.5, y-8); if (r > 3.6 && r < 5.2) return (x + y < 15) ? PAL.slate[0] : PAL.slate[3]; if (r <= 3.6) return pick(PAL.slate, 0.25 + hash2(x,y,104)*0.3); return pick(PAL.slate, 0.35 + vnoise(x/2.5,y/2.5,103)*0.45 + hash2(x,y,105)*0.2); });
 
+makeTile('royal', (x, y) => ((x + y) % 8 === 0 || (x - y + 16) % 8 === 0) ? [236,190,70] : pick([[92,44,132],[108,54,150],[124,66,168],[140,80,184]], vnoise(x/2.5, y/2.5, 111)*0.6 + hash2(x,y,112)*0.4));
 export const atlasTex = new THREE.CanvasTexture(atlasCanvas);
 atlasTex.magFilter = THREE.NearestFilter; atlasTex.minFilter = THREE.NearestMipmapLinearFilter; atlasTex.colorSpace = THREE.SRGBColorSpace;
 /* [tapa, base, lados] por id de bloque */
 export const BLOCK_TILES = []; export const setBT = (id, top, bot, side) => BLOCK_TILES[id] = [T[top], T[bot], T[side]];
 setBT(B.GRASS,'grass_top','dirt','grass_side'); setBT(B.DIRT,'dirt','dirt','dirt'); setBT(B.STONE,'stone','stone','stone'); setBT(B.LOG,'log_top','log_top','log_side');
 setBT(B.LEAVES,'leaves','leaves','leaves'); setBT(B.WOOD,'wood','wood','wood'); setBT(B.PLAT,'plat','plat','plat');
-setBT(B.BLACK,'black','black','black'); setBT(B.WHITE,'white','white','white'); setBT(B.RUST,'rust','rust','rust'); setBT(B.BROWN,'brown','brown','brown'); setBT(B.LAVENDER,'lavender','lavender','lavender'); setBT(B.SLATE,'slate','slate','slate');
+setBT(B.ROYAL,'royal','royal','royal'); setBT(B.BLACK,'black','black','black'); setBT(B.WHITE,'white','white','white'); setBT(B.RUST,'rust','rust','rust'); setBT(B.BROWN,'brown','brown','brown'); setBT(B.LAVENDER,'lavender','lavender','lavender'); setBT(B.SLATE,'slate','slate','slate');
 export function tileRect(idx){ const ax = (idx % ATLAS_N) * CELL + PADPX, ay = Math.floor(idx / ATLAS_N) * CELL + PADPX; return [ax / ATLAS_PX, 1 - (ay + TILE) / ATLAS_PX, TILE / ATLAS_PX, TILE / ATLAS_PX]; } // u0, v0(abajo), du, dv
+
+/* tema del segundo mapa, el Reino de Piedra: musgo, turba, adoquines, hojas de otoño, madera oscura y losas de mármol */
+export function castleTheme(){
+  const moss = [[38,84,62],[48,102,70],[62,120,76],[80,138,84],[104,154,92]], peat = [[52,38,34],[66,48,40],[82,60,48],[98,74,58],[114,88,68]];
+  const mossPx = (x, y, s) => { if (hash2(x, y, s+2) < 0.035) return [176,116,206]; if (hash2(x, y, s+3) < 0.02) return [226,196,90]; return pick(moss, vnoise(x/2.6, y/2.6, s)*0.55 + hash2(x, y, s+1)*0.45); };
+  const peatPx = (x, y, s) => { if (hash2(x, y, s+3) < 0.04) return [140,132,126]; return pick(peat, vnoise(x/2.4, y/2.4, s)*0.6 + hash2(x, y, s+1)*0.4); };
+  makeTile('grass_top', (x, y) => mossPx(x, y, 311));
+  makeTile('grass_side', (x, y) => { const d = 2 + Math.round(vnoise(x/1.7, 3.3, 331)*3 + hash2(x, 1, 332)*1.6); if (y < d) return y === d-1 ? mul(mossPx(x, y, 315), 0.78) : mossPx(x, y, 315); if (y === d) return mul(peatPx(x, y, 321), 0.62); if (y === d+1) return mul(peatPx(x, y, 321), 0.84); return peatPx(x, y, 321); });
+  makeTile('dirt', (x, y) => peatPx(x, y, 321));
+  makeTile('stone', (x, y) => { const row = Math.floor(y/4), off = row % 2 ? 4 : 0, bx = Math.floor((x + off)/8); if (y % 4 === 3 || (x + off) % 8 === 7) return [66,64,72]; if (hash2(x, y, 402) < 0.045) return [84,122,78];
+    const k = 0.94 + hash2(x, y, 403)*0.12, c = pick([[118,116,122],[134,132,134],[150,148,144],[166,162,152]], hash2(bx, row, 401)); return [c[0]*k, c[1]*k, c[2]*k]; });
+  makeTile('log_side', (x, y) => { if (hash2(x, 0, 353) < 0.22) return [34,24,20]; return pick([[48,34,26],[60,44,32],[74,54,38],[88,66,46]], hash2(x, Math.floor((y + hash2(x,0,351)*9)/5), 352)*0.75 + hash2(x,y,355)*0.25); });
+  makeTile('leaves', (x, y) => { const h = hash2(x, y, 361); if (h < 0.11) return [96,40,20]; if (h > 0.96) return [250,206,90]; return pick([[150,60,24],[190,84,28],[222,120,36],[238,164,54]], vnoise(x/2.2, y/2.2, 362)*0.5 + h*0.5); });
+  makeTile('wood', (x, y) => { const row = Math.floor(y/4); if (y % 4 === 3) return [70,46,30]; if (x === (row*5 + 3) % 16) return [80,54,34]; return pick([[108,72,44],[122,84,52],[136,96,60],[150,108,70]], hash2(x, row, 371)*0.5 + hash2(Math.floor(x/3), y, 372)*0.5); });
+  makeTile('plat', (x, y) => { const e = Math.min(x, y, 15-x, 15-y); if (e === 0) return [96,60,128]; if (e === 1) return [236,190,70]; if ((x === 3 || x === 12) && (y === 3 || y === 12)) return [236,190,70]; return pick([[226,222,216],[236,232,226],[244,241,236]], hash2(x,y,381)); });
+  atlasTex.needsUpdate = true;
+}

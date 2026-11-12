@@ -13,14 +13,27 @@ export const COW_DEFS = [
   { legH:0.50, legW:0.25, body:[0.94, 0.78, 1.36], head:[0.64, 0.58, 0.52], pitch:1.0 },   // Faja: compacta, sin cuernos
   { legH:0.42, legW:0.29, body:[1.02, 0.84, 1.42], head:[0.70, 0.62, 0.54], pitch:0.82 },  // Greñuda: baja y peluda
   { legH:0.76, legW:0.20, body:[0.78, 0.72, 1.42], head:[0.54, 0.56, 0.58], pitch:1.22 },  // Lunar: alta y delgada
+  { legH:0.58, legW:0.24, body:[0.90, 0.80, 1.40], head:[0.62, 0.58, 0.54], pitch:1.1 },   // Real: marfil, con manto y corona
 ];
 export const lam = (map, extra = {}) => new THREE.MeshLambertMaterial(Object.assign({ map }, extra));
 export const flat = c => new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(c[0]/255, c[1]/255, c[2]/255, THREE.SRGBColorSpace) });
 export function eyePx(x, y, ex, ey){ const dx = x - ex, dy = y - ey; if (dx < 0 || dx > 2 || dy < 0 || dy > 2) return null; if (dx === 0 && dy === 0) return [255,255,255]; if (dy === 0 || dx === 0) return [250,250,250]; return [24,18,22]; }
-export const cowMats = [null, null, null];
+export const cowMats = [null, null, null, null];
 export function getCowMats(vi){
   if (cowMats[vi]) return cowMats[vi]; const M = {};
   const muzzle = (base, nose) => pxTex(8, 5, (x, y) => { if (y === 1 && (x === 2 || x === 5)) return nose; if (y === 3 && x >= 2 && x <= 5) return mul(base, 0.7); if (y === 2 && (x === 1 || x === 6)) return mul(base, 0.7); return mul(base, 0.94 + hash2(x,y,7)*0.1); });
+  if (vi === 3){
+    const ivo = [[226,214,190],[238,228,206],[246,240,224],[254,250,240]], pur = [[92,44,132],[108,54,150],[124,66,168],[140,80,184]], gold = [236,190,70];
+    const iv = (x, y, s) => pick(ivo, vnoise(x/2, y/2, s)*0.65 + hash2(x,y,s+1)*0.35), pu = (x, y, s) => pick(pur, vnoise(x/2.5, y/2.5, s)*0.6 + hash2(x,y,s+1)*0.4);
+    const side = pxTex(24, 14, (x, y) => { if (y === 7) return gold; if (y === 8 && x % 3 === 1) return gold; return y < 7 ? ((x + y) % 6 === 0 ? gold : pu(x, y, 281)) : iv(x, y, 283); });
+    const top = pxTex(14, 24, (x, y) => (x === 0 || x === 13 || y === 0 || y === 23) ? gold : ((x + y) % 6 === 0 ? gold : pu(x, y, 281)));
+    const plain = pxTex(16, 16, (x, y) => iv(x, y, 283));
+    M.body = [lam(side), lam(side), lam(top), lam(plain), lam(plain), lam(plain)]; M.fur = lam(plain);
+    M.face = lam(pxTex(16, 16, (x, y) => eyePx(x, y, 2, 6) || eyePx(15-x, y, 2, 6) || ((y === 10 || y === 11) && (x === 1 || x === 2 || x === 13 || x === 14) ? [246,170,180] : iv(x, y, 283))));
+    M.leg = lam(pxTex(6, 12, (x, y) => y > 9 ? gold : iv(x, y, 285))); M.muzzle = lam(muzzle([244,196,200], [150,96,110])); M.ear = M.fur; M.tail = M.fur; M.tuft = flat(pur[2]);
+    M.crown = new THREE.MeshLambertMaterial({ color:0xf0c040, emissive:0x6a4a00, emissiveIntensity:0.6 }); M.gem = new THREE.MeshLambertMaterial({ color:0xd02848, emissive:0x600818, emissiveIntensity:0.7 });
+    return cowMats[vi] = M;
+  }
   if (vi === 0){
     const fur = (x, y, s) => pick(PAL.black, vnoise(x/1.5, y/1.5, s)*0.7 + hash2(x,y,s+1)*0.3), wh = (x, y, s) => pick(PAL.white, vnoise(x/2, y/2, s)*0.6 + hash2(x,y,s+1)*0.4);
     const side = pxTex(24, 14, (x, y) => { const e0 = 8 + Math.round(hash2(0,y,201)*1.4), e1 = 15 - Math.round(hash2(1,y,202)*1.4); return (x >= e0 && x <= e1) ? wh(x,y,203) : fur(x,y,205); });
@@ -65,6 +78,11 @@ export function buildCowModel(vi){
     [1, -1].forEach(s => { addBox(g, 0.06, 0.6, bl*0.98, M.skirt, s*(bw/2 + 0.035), lh + bh*0.38, 0); });        // pelo largo colgando
     addBox(head, hw + 0.06, 0.36, 0.05, M.fringe, 0, hy + hh*0.24, hz + hd/2 + 0.035); addBox(head, hw + 0.04, 0.1, hd*0.7, M.fringeTop, 0, hy + hh/2 + 0.04, hz + 0.06); // flequillo
     [1, -1].forEach(s => { const h1 = addBox(head, 0.36, 0.1, 0.1, M.horn, s*(hw/2 + 0.16), hy + hh*0.34, hz - 0.08), h2 = addBox(head, 0.3, 0.1, 0.1, M.horn, s*(hw/2 + 0.42), hy + hh*0.34 + 0.1, hz - 0.08), h3 = addBox(head, 0.08, 0.2, 0.08, M.horn, s*(hw/2 + 0.55), hy + hh*0.34 + 0.27, hz - 0.08), h4 = addBox(head, 0.06, 0.08, 0.06, M.hornTip, s*(hw/2 + 0.57), hy + hh*0.34 + 0.4, hz - 0.08); h2.rotation.z = s*0.7; h3.rotation.z = -s*0.1; h4.rotation.z = -s*0.1; h1.rotation.z = s*0.12; });
+  }
+  if (vi === 3){   // corona
+    addBox(head, 0.46, 0.1, 0.4, M.crown, 0, hy + hh/2 + 0.05, hz - 0.02);
+    for (const [cx, cz] of [[-0.18, -0.17], [0.18, -0.17], [-0.18, 0.13], [0.18, 0.13], [0, 0.13]]) addBox(head, 0.1, cx === 0 ? 0.2 : 0.14, 0.1, M.crown, cx, hy + hh/2 + (cx === 0 ? 0.2 : 0.17), hz - 0.02 + cz);
+    addBox(head, 0.08, 0.08, 0.04, M.gem, 0, hy + hh/2 + 0.06, hz + 0.19);
   }
   if (vi === 2){
     [1, -1].forEach(s => { addBox(head, 0.12, 0.14, 0.02, M.eye, s*0.14, hy + 0.03, hz + hd/2 + 0.008); addBox(head, 0.09, 0.13, 0.09, M.horn, s*(hw/2 - 0.08), hy + hh/2 + 0.06, hz - 0.1); });
