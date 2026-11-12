@@ -54,3 +54,6 @@ if (canFS){
   ['btnStart', 'btnStartFree', 'btnResume'].forEach(id => $(id).addEventListener('click', () => { if (GS.touch && wantFS) goFS(true); }));
 }
 export function fsInfo(){ return { soportado: canFS, activo: isFS(), deseado: wantFS }; }
+/* iPhone: Safari no permite pantalla completa a las páginas; la alternativa es abrir el juego desde la pantalla de inicio */
+try { const standalone = navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches;
+  if (!canFS && /iPhone|iPod/.test(navigator.userAgent) && !standalone) $('iosTip').classList.remove('hidden'); } catch (e){}

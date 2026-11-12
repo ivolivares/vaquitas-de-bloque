@@ -97,3 +97,4 @@ body[data-touch="1"] #topright{ right:66px; }
 .rot{ background:#ffe1b0; border:3px solid var(--naranja); border-radius:6px; padding:8px 12px; font-size:16px; }
 #rotHint{ display:none; position:fixed; left:50%; top:64px; transform:translateX(-50%); z-index:13; background:#ffe1b0; border:3px solid var(--naranja); border-radius:6px; padding:5px 12px; font-weight:bold; font-size:14px; white-space:nowrap; pointer-events:none; }
 @media (orientation:portrait){ body[data-touch="1"][data-state="play"] #rotHint{ display:block; } }
+#iosTip{ font-size:13px; background:#eef4ff; border:2px solid #9db6e8; border-radius:6px; padding:6px 10px; }
