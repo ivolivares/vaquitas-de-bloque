@@ -94,3 +94,6 @@ body[data-touch="1"] #topright{ right:66px; }
   #dial{ font-size:14px; top:8px; } #tip{ top:44px; font-size:13px; } #hint{ font-size:14px; } #toast{ font-size:16px; }
   #prizeUI .card{ padding:4px 14px; } #prizeUI .card h2{ font-size:18px; } #prizeUI .card p{ font-size:12px; }
 }
+.rot{ background:#ffe1b0; border:3px solid var(--naranja); border-radius:6px; padding:8px 12px; font-size:16px; }
+#rotHint{ display:none; position:fixed; left:50%; top:64px; transform:translateX(-50%); z-index:13; background:#ffe1b0; border:3px solid var(--naranja); border-radius:6px; padding:5px 12px; font-weight:bold; font-size:14px; white-space:nowrap; pointer-events:none; }
+@media (orientation:portrait){ body[data-touch="1"][data-state="play"] #rotHint{ display:block; } }

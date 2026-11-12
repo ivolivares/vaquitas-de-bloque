@@ -185,10 +185,11 @@ function updateCuatrero(u, dt){
         const c = u.target; if (c && !c.held && Math.hypot(c.x - u.x, c.z - u.z) < 1.35 && Math.abs(c.gy - u.gy) <= 2){ c.held = true; c.holder = u; u.cow = c; u.target = null; u.state = 'tie'; u.t = 2.5; u.path = []; sndAlarm(); toast('¡Un cuatrero atrapó a tu ' + cowName(c) + '! Enciérralo antes de que se la lleve.'); refreshCounter(); }
       }
     }
-    else if (u.state === 'tie'){ u.t -= dt; const c = u.cow; if (!c){ u.state = 'seek'; } else { u.rot = Math.atan2(c.x - u.x, c.z - u.z); if (u.t <= 0){ u.site = choosePen(u); u.state = 'carry'; u.rp = 0; u.lost = 0; u.idle = 0; } } }
+    else if (u.state === 'tie'){ u.t -= dt; const c = u.cow; if (!c){ u.state = 'seek'; } else { u.rot = Math.atan2(c.x - u.x, c.z - u.z); if (u.t <= 0){ u.site = choosePen(u); u.state = 'carry'; u.rp = 0; u.lost = 0; u.idle = 0; u.dawn = false; } } }
     else if (u.state === 'carry'){
       const c = u.cow; if (!c){ u.state = awake() ? 'seek' : 'sleep'; }
       else {
+        if (!awake() && !u.dawn){ u.dawn = true; u.site = [Math.floor(u.x), Math.floor(u.z)]; u.path = [u.site.slice()]; u.rp = 999; }   // amaneció: arma el corral donde está y se duerme
         const [sx, sz] = u.site; u.rp -= dt;
         if (u.rp <= 0){ u.rp = 0.8; const res = bfs(Math.floor(u.x), Math.floor(u.z), u.gy, (x, z) => x === sx && z === sz); if (res.goal != null){ u.path = pathFrom(res); u.lost = 0; } else if (++u.lost >= 3){ u.site = [Math.floor(u.x), Math.floor(u.z)]; u.path = [u.site.slice()]; } }
         follow(u, 1.35, dt);

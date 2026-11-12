@@ -37,3 +37,20 @@ const jump = $('tJump'); jump.addEventListener('pointerdown', e => { e.preventDe
 $('tPause').addEventListener('pointerdown', e => { e.preventDefault(); GS.joyF = GS.joyS = 0; setState('pause'); });
 [...$('hotbar').children].forEach((el, i) => el.addEventListener('pointerdown', e => { if (e.pointerType === 'touch'){ e.preventDefault(); selectSlot(i); } }));
 document.addEventListener('gesturestart', e => e.preventDefault());
+
+/* pantalla completa: automática al empezar en táctil (donde el navegador lo permite) y opcional desde la pausa */
+const root = document.documentElement, reqFS = root.requestFullscreen || root.webkitRequestFullscreen, exitFS = document.exitFullscreen || document.webkitExitFullscreen;
+const canFS = !!reqFS && !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const isFS = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+let wantFS = true;
+function goFS(on){ try {
+  if (on && !isFS()){ const p = reqFS.call(root, { navigationUI:'hide' }); const lockIt = () => { try { const q = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (q && q.catch) q.catch(() => {}); } catch (e){} }; if (p && p.then) p.then(lockIt).catch(() => {}); else lockIt(); }
+  else if (!on && isFS()) exitFS.call(document);
+} catch (e){} }
+function refreshFS(){ $('btnFS').textContent = 'Pantalla completa: ' + (isFS() ? 'sí' : 'no'); }
+if (canFS){
+  $('btnFS').classList.remove('hidden'); $('btnFS').onclick = () => { wantFS = !isFS(); goFS(wantFS); };
+  document.addEventListener('fullscreenchange', refreshFS); document.addEventListener('webkitfullscreenchange', refreshFS);
+  ['btnStart', 'btnStartFree', 'btnResume'].forEach(id => $(id).addEventListener('click', () => { if (GS.touch && wantFS) goFS(true); }));
+}
+export function fsInfo(){ return { soportado: canFS, activo: isFS(), deseado: wantFS }; }

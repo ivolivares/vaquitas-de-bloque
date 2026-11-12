@@ -7,6 +7,9 @@
 <meta name="description" content="Juego 3D gratis para el navegador: explora un mundo de bloques, rellena cada figura con el pelaje correcto, dale vida a 3 vacas y gana tu Ternerito Dorado. Se juega con teclado y mouse.">
 <meta name="author" content="Iván Olivares">
 <meta name="theme-color" content="#58a83a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vaquitas">
 <link rel="canonical" href="https://vaquitas-de-bloque.vercel.app/">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -47,11 +50,11 @@
   <div class="panel">
     <h1>Vaquitas de Bloque</h1>
     <p>Sigue los <b>haces de luz</b>, rellena cada figura con el pelaje correcto y dale vida a <b>3 vacas</b>.<br>Mientras más rápido armes una vaca, más se parecerá tu premio a ella.</p>
+    <p class="rot">↻ Gira tu teléfono: la experiencia es mucho mejor en horizontal.</p>
     <div class="modes">
       <div><button class="big" id="btnStart">Modo aventura</button><small>De noche llegan los cuatreros a robarte las vacas</small></div>
       <div><button class="sec" id="btnStartFree">Modo libre</button><small>Construye tranquilo, sin cuatreros</small></div>
     </div>
-    <p class="rot">Gira tu teléfono: se juega mejor en horizontal.</p>
     <p class="touchOnly">Joystick para moverte · arrastra para mirar · botones para romper, poner y saltar</p>
     <table class="keys">
       <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Moverte</td></tr>
@@ -71,6 +74,7 @@
     <button class="sec" id="btnMute">Sonidos: activados</button>
     <button class="sec" id="btnMusic">Música: activada</button>
     <button class="sec" id="btnMode">Modo: aventura</button>
+    <button class="sec hidden" id="btnFS">Pantalla completa: no</button>
     <table class="keys">
       <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Moverte</td></tr>
       <tr><td>Mouse (o flechas)</td><td>Mirar</td></tr>
@@ -104,6 +108,7 @@
 </div>
 <div id="dbg" class="hidden"></div>
 <div id="confetti"></div>
+<div id="rotHint">↻ Gira tu teléfono: se juega mejor en horizontal</div>
 <div id="touch">
   <div id="joy"><div id="joyKnob"></div></div>
   <button id="tPause" aria-label="Pausa">II</button>

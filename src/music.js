@@ -14,17 +14,17 @@ const DAY_TRACKS = [
   T('Pradera', { bpm:104, swing:0.1, chords:['C','Am','F','G','C','Am','F G','C'], mel:[
     'E5 . G5 . C6 . G5 .', 'A5 . G5 E5 . . C5 .', 'F5 . A5 . C6 . A5 .', 'G5 . F5 D5 . . G4 .',
     'E5 G5 C6 . B5 . G5 .', 'A5 . C6 A5 . . E5 .', 'F5 E5 D5 . G5 F5 E5 D5', 'C5 . . . - - - -'] }),
-  T('Manos a la obra', { bpm:120, swing:0.14, drums:'bounce', chords:['G','G','C','D','Em','C','D','G'], mel:[
+  T('Manos a la obra', { bpm:112, swing:0.14, drums:'bounce', chords:['G','G','C','D','Em','C','D','G'], mel:[
     'G4 B4 D5 B4 G4 B4 D5 .', 'G5 . D5 . B4 . D5 .', 'E5 C5 E5 G5 . E5 C5 .', 'D5 . F#5 . A5 . F#5 .',
     'G5 . E5 . B4 . E5 .', 'C5 E5 G5 E5 C5 . E5 .', 'D5 E5 F#5 A5 . F#5 D5 .', 'G5 . . . D5 . G4 .'] }),
-  T('Siesta', { bpm:84, lead:'triangle', leadVol:0.11, cutoff:3200, drums:'none', chords:['F','Dm','Bb','C','F','Dm','Gm C','F'], mel:[
+  T('Siesta', { bpm:92, lead:'triangle', leadVol:0.11, cutoff:3200, drums:'none', chords:['F','Dm','Bb','C','F','Dm','Gm C','F'], mel:[
     'A4 . . C5 . . F5 .', 'F5 . E5 D5 . . A4 .', 'Bb4 . . D5 . . F5 .', 'E5 . D5 C5 . . . .',
     'A4 . C5 . F5 . A5 .', 'G5 . F5 D5 . . F5 .', 'G5 . . Bb4 . C5 E5 .', 'F5 . . . . . - -'] }),
-  T('Establo', { bpm:112, swing:0.16, drums:'bounce', chords:['D','G','D','A','D','G','A','D'], mel:[
+  T('Establo', { bpm:108, swing:0.16, drums:'bounce', chords:['D','G','D','A','D','G','A','D'], mel:[
     'F#5 . A5 F#5 D5 . F#5 .', 'G5 . B5 G5 D5 . G5 .', 'A5 . F#5 . D5 E5 F#5 .', 'E5 . C#5 . A4 . E5 .',
     'F#5 A5 D6 . A5 . F#5 .', 'B5 . G5 . E5 G5 B5 .', 'A5 G5 E5 C#5 . E5 A5 .', 'D5 . . . F#5 . D5 .'] }),
 ];
-const NIGHT_TRACK = T('Vienen los cuatreros', { bpm:138, lead:'sawtooth', leadVol:0.04, cutoff:1400, arp:false, drums:'night', bass:'pulse', chords:['Am','Am','F','E','Am','Dm','E','Am'], mel:[
+const NIGHT_TRACK = T('Vienen los cuatreros', { bpm:126, lead:'sawtooth', leadVol:0.04, cutoff:1400, arp:false, drums:'night', bass:'pulse', chords:['Am','Am','F','E','Am','Dm','E','Am'], mel:[
   'A4 - C5 - E5 - C5 -', 'A4 - C5 - E5 . D#5 .', 'F4 - A4 - C5 - A4 -', 'E4 - G#4 - B4 . . .',
   'A4 C5 E5 A5 - E5 C5 -', 'D5 - F5 - A5 . F5 -', 'E5 - G#5 - B5 - G#5 E5', 'A5 . - - A4 . - -'] });
 
@@ -57,14 +57,14 @@ function schedule(tr, b, s, t){
 function pickTrack(){ if (isTense()) return NIGHT_TRACK; let i; do { i = Math.floor(Math.random()*DAY_TRACKS.length); } while (i === lastDay); lastDay = i; return DAY_TRACKS[i]; }
 function tick(){
   if (!GS.musicOn || !ensure() || ctx.state !== 'running' || document.hidden){ nextT = 0; return; }
-  const now = ctx.currentTime; if (nextT < now - 0.2){ nextT = now + 0.1; st = 0; }
-  while (nextT < now + 0.3){
+  const now = ctx.currentTime; if (nextT < now + 0.03){ const first = nextT === 0; nextT = now + 0.08; if (first) st = 0; }
+  while (nextT < now + 0.6){
     if (st === 0 && (!cur || (cur === NIGHT_TRACK) !== isTense() || (bar === 0 && loops >= 2))){ cur = pickTrack(); bar = 0; loops = 0; }
     const sd = 30/cur.bpm; schedule(cur, bar, st, nextT + (st % 2 ? cur.swing*sd : 0)); nextT += sd;
     if (++st === 8){ st = 0; if (++bar === 8){ bar = 0; loops++; } }
   }
 }
-setInterval(tick, 60);
+setInterval(tick, 40);
 export function setMusic(on){ GS.musicOn = on; initAudio(); if (ensure()) bus.gain.setTargetAtTime(on ? 0.5 : 0, ctx.currentTime, 0.08); refreshMusicUI(); writeSave(); }
 export function refreshMusicUI(){ $('btnMusic').textContent = 'Música: ' + (GS.musicOn ? 'activada' : 'silenciada'); }
 export function musicInfo(){ return { tema: cur ? cur.name : null, compas: bar, activa: GS.musicOn }; }
