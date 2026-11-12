@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vaquitas-de-bloque.vercel.app/sitemap.xml

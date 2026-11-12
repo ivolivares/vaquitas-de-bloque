@@ -1,0 +1,113 @@
+/* VACAS: modelos de cajas, texturas procedurales y comportamiento */
+import * as THREE from 'three';
+import { GS, late } from './state.js';
+import { clamp, hash2, mul, pick, pxTex, vnoise } from './util.js';
+import { WX, WY, WZ } from './blocks.js';
+import { PAL } from './atlas.js';
+import { getB } from './world.js';
+import { scene, spawnP, TEX } from './render.js';
+import { sndMoo } from './audio.js';
+
+export const COW_DEFS = [
+  { legH:0.50, legW:0.25, body:[0.94, 0.78, 1.36], head:[0.64, 0.58, 0.52], pitch:1.0 },   // Faja: compacta, sin cuernos
+  { legH:0.42, legW:0.29, body:[1.02, 0.84, 1.42], head:[0.70, 0.62, 0.54], pitch:0.82 },  // Greñuda: baja y peluda
+  { legH:0.76, legW:0.20, body:[0.78, 0.72, 1.42], head:[0.54, 0.56, 0.58], pitch:1.22 },  // Lunar: alta y delgada
+];
+export const lam = (map, extra = {}) => new THREE.MeshLambertMaterial(Object.assign({ map }, extra));
+export const flat = c => new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(c[0]/255, c[1]/255, c[2]/255, THREE.SRGBColorSpace) });
+export function eyePx(x, y, ex, ey){ const dx = x - ex, dy = y - ey; if (dx < 0 || dx > 2 || dy < 0 || dy > 2) return null; if (dx === 0 && dy === 0) return [255,255,255]; if (dy === 0 || dx === 0) return [250,250,250]; return [24,18,22]; }
+export const cowMats = [null, null, null];
+export function getCowMats(vi){
+  if (cowMats[vi]) return cowMats[vi]; const M = {};
+  const muzzle = (base, nose) => pxTex(8, 5, (x, y) => { if (y === 1 && (x === 2 || x === 5)) return nose; if (y === 3 && x >= 2 && x <= 5) return mul(base, 0.7); if (y === 2 && (x === 1 || x === 6)) return mul(base, 0.7); return mul(base, 0.94 + hash2(x,y,7)*0.1); });
+  if (vi === 0){
+    const fur = (x, y, s) => pick(PAL.black, vnoise(x/1.5, y/1.5, s)*0.7 + hash2(x,y,s+1)*0.3), wh = (x, y, s) => pick(PAL.white, vnoise(x/2, y/2, s)*0.6 + hash2(x,y,s+1)*0.4);
+    const side = pxTex(24, 14, (x, y) => { const e0 = 8 + Math.round(hash2(0,y,201)*1.4), e1 = 15 - Math.round(hash2(1,y,202)*1.4); return (x >= e0 && x <= e1) ? wh(x,y,203) : fur(x,y,205); });
+    const top = pxTex(14, 24, (x, y) => { const e0 = 8 + Math.round(hash2(x,0,206)*1.4), e1 = 15 - Math.round(hash2(x,1,207)*1.4); return (y >= e0 && y <= e1) ? wh(x,y,203) : fur(x,y,205); });
+    const plain = pxTex(16, 16, (x, y) => fur(x, y, 205));
+    M.body = [lam(side), lam(side), lam(top), lam(top), lam(plain), lam(plain)]; M.fur = lam(plain);
+    M.face = lam(pxTex(16, 16, (x, y) => eyePx(x, y, 2, 6) || eyePx(15-x, y, 2, 6) || ((y === 11 && (x === 2 || x === 13)) ? [150,90,100] : fur(x, y, 205))));
+    M.leg = lam(pxTex(6, 12, (x, y) => y > 9 ? [14,12,16] : fur(x, y, 209))); M.muzzle = lam(muzzle([196,192,190], [60,54,58])); M.ear = M.fur; M.tail = M.fur; M.tuft = M.fur;
+  } else if (vi === 1){
+    const blond = [[196,128,54],[218,156,76],[236,184,104],[246,208,138]];
+    const st = (x, y, s, pal = PAL.rust) => pick(pal, hash2(x, Math.floor((y + hash2(x,0,s)*13)/7), s+1)*0.7 + hash2(x,y,s+2)*0.3);
+    const fur = pxTex(16, 16, (x, y) => st(x, y, 220)); M.fur = lam(fur); M.body = M.fur;
+    M.face = lam(pxTex(16, 16, (x, y) => eyePx(x, y, 2, 7) || eyePx(15-x, y, 2, 7) || st(x, y, 224)));
+    M.skirt = lam(pxTex(24, 12, (x, y) => (y > 6 + Math.floor(hash2(x,0,226)*6)) ? null : st(x, y, 227, y < 3 ? PAL.rust : blond.slice(0,3).concat([PAL.rust[3]]))), { alphaTest:0.5, side:THREE.DoubleSide });
+    M.fringe = lam(pxTex(14, 9, (x, y) => (y > 4 + Math.floor(hash2(x,0,230)*5)) ? null : st(x, y, 231, blond)), { alphaTest:0.5, side:THREE.DoubleSide });
+    M.fringeTop = lam(pxTex(8, 8, (x, y) => st(x, y, 233, blond)));
+    M.leg = lam(pxTex(6, 10, (x, y) => y > 7 ? [40,26,20] : st(x, y, 235, PAL.rust.slice(0,3)))); M.muzzle = lam(muzzle([214,160,140], [90,50,44])); M.ear = M.fur; M.tail = M.fur; M.tuft = lam(pxTex(4, 4, (x, y) => st(x, y, 237, blond)));
+    M.horn = lam(pxTex(4, 4, (x, y) => pick([[214,200,168],[232,222,194],[244,238,216]], hash2(x,y,239)))); M.hornTip = flat([150,128,100]);
+  } else {
+    const lv = (x, y, s) => pick(PAL.lav, vnoise(x/3, y/3, s)*0.7 + hash2(x,y,s+1)*0.3);
+    const patch = (x, y, s, sc = 5) => { const n = vnoise(x/sc, y/sc, s); if (n > 0.64) return n > 0.78 ? PAL.slate[3] : pick(PAL.slate, 0.3 + hash2(x,y,s+2)*0.45); if (n > 0.61) return PAL.slate[0]; return lv(x, y, s+3); };
+    M.body = lam(pxTex(24, 16, (x, y) => patch(x, y, 250))); M.fur = lam(pxTex(16, 16, (x, y) => patch(x, y, 256, 6)));
+    M.face = lam(pxTex(16, 16, (x, y) => { if ((x === 7 || x === 8) && y < 12) return PAL.lav[3]; if (y >= 5 && y <= 9 && ((x >= 1 && x <= 5) || (x >= 10 && x <= 14))) return PAL.slate[0]; return lv(x, y, 260); }));
+    M.leg = lam(pxTex(6, 16, (x, y) => y > 13 ? PAL.slate[0] : (y > 6 ? PAL.lav[3] : patch(x, y, 262, 4)))); M.muzzle = lam(muzzle([234,206,230], [120,96,150])); M.ear = M.fur; M.tail = M.fur; M.tuft = flat(PAL.slate[1]);
+    M.horn = flat([226,232,244]); M.eye = new THREE.MeshLambertMaterial({ color:0x1c3a4a, emissive:0x9ff2ff, emissiveIntensity:1.0 }); M.udder = flat([240,190,214]);
+  }
+  return cowMats[vi] = M;
+}
+export function addBox(parent, w, h, d, mat, x, y, z){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); parent.add(m); return m; }
+export function buildCowModel(vi){
+  const D = COW_DEFS[vi], M = getCowMats(vi), g = new THREE.Group(), [bw, bh, bl] = D.body, [hw, hh, hd] = D.head, lh = D.legH, lw = D.legW;
+  addBox(g, bw, bh, bl, M.body, 0, lh + bh/2, 0);
+  const legs = []; [[1,1],[-1,1],[1,-1],[-1,-1]].forEach(([sx, sz]) => { const lg = new THREE.Group(); lg.position.set(sx*(bw/2 - lw/2 - 0.02), lh + 0.04, sz*(bl/2 - lw/2 - 0.04)); addBox(lg, lw, lh + 0.04, lw, M.leg, 0, -(lh + 0.04)/2, 0); g.add(lg); legs.push(lg); });
+  const head = new THREE.Group(); head.position.set(0, lh + bh*0.74, bl/2 - 0.1); g.add(head);
+  const hy = 0.1, hz = hd/2 + 0.04;
+  addBox(head, hw, hh, hd, [M.fur, M.fur, M.fur, M.fur, M.face, M.fur], 0, hy, hz);
+  addBox(head, hw*0.68, hh*0.42, 0.16, [M.muzzle, M.muzzle, M.muzzle, M.muzzle, M.muzzle, M.muzzle], 0, hy - hh*0.25, hz + hd/2 + 0.06);
+  [1, -1].forEach(s => { const e = addBox(head, 0.22, 0.12, 0.07, M.ear, s*(hw/2 + 0.1), hy + hh*0.22, hz - 0.02); e.rotation.z = -s*0.25; });
+  const tail = new THREE.Group(); tail.position.set(0, lh + bh*0.86, -bl/2); g.add(tail); addBox(tail, 0.07, 0.5, 0.07, M.tail, 0, -0.25, -0.04); addBox(tail, 0.13, 0.15, 0.13, M.tuft, 0, -0.55, -0.04);
+  if (vi === 0){ addBox(head, 0.36, 0.1, 0.3, M.fur, 0, hy + hh/2 + 0.04, hz - 0.04); }                 // copete rizado, sin cuernos
+  if (vi === 1){
+    [1, -1].forEach(s => { addBox(g, 0.06, 0.6, bl*0.98, M.skirt, s*(bw/2 + 0.035), lh + bh*0.38, 0); });        // pelo largo colgando
+    addBox(head, hw + 0.06, 0.36, 0.05, M.fringe, 0, hy + hh*0.24, hz + hd/2 + 0.035); addBox(head, hw + 0.04, 0.1, hd*0.7, M.fringeTop, 0, hy + hh/2 + 0.04, hz + 0.06); // flequillo
+    [1, -1].forEach(s => { const h1 = addBox(head, 0.36, 0.1, 0.1, M.horn, s*(hw/2 + 0.16), hy + hh*0.34, hz - 0.08), h2 = addBox(head, 0.3, 0.1, 0.1, M.horn, s*(hw/2 + 0.42), hy + hh*0.34 + 0.1, hz - 0.08), h3 = addBox(head, 0.08, 0.2, 0.08, M.horn, s*(hw/2 + 0.55), hy + hh*0.34 + 0.27, hz - 0.08), h4 = addBox(head, 0.06, 0.08, 0.06, M.hornTip, s*(hw/2 + 0.57), hy + hh*0.34 + 0.4, hz - 0.08); h2.rotation.z = s*0.7; h3.rotation.z = -s*0.1; h4.rotation.z = -s*0.1; h1.rotation.z = s*0.12; });
+  }
+  if (vi === 2){
+    [1, -1].forEach(s => { addBox(head, 0.12, 0.14, 0.02, M.eye, s*0.14, hy + 0.03, hz + hd/2 + 0.008); addBox(head, 0.09, 0.13, 0.09, M.horn, s*(hw/2 - 0.08), hy + hh/2 + 0.06, hz - 0.1); });
+    addBox(g, 0.34, 0.14, 0.34, M.udder, 0, lh - 0.05, -bl*0.2);
+  }
+  return { g, legs, head, tail };
+}
+export const cows = [];
+export function walkableY(x, z, fy){ const bx = Math.floor(x), bz = Math.floor(z); if (bx < 1 || bx >= WX-1 || bz < 1 || bz >= WZ-1) return null;
+  for (const gy of [fy+1, fy, fy-1, fy-2]){ if (gy < 1 || getB(bx, gy-1, bz) === 0) continue; let clear = true; for (let y = gy; y <= Math.max(gy, fy) + 1; y++) if (getB(bx, y, bz) !== 0){ clear = false; break; } if (clear) return gy; } return null; }
+export function spawnCow(p){
+  const model = buildCowModel(p.i), c = { vi:p.i, p, group:model.g, legs:model.legs, head:model.head, tail:model.tail, x:p.center.x, z:p.center.z, y:p.H, gy:p.H, rot:Math.PI, state:'idle', t:1.5 + Math.random()*2, tx:0, tz:0, phase:Math.random()*6, bounce:0, tilt:0 };
+  model.g.userData.cow = c; model.g.position.set(c.x, c.y, c.z); model.g.rotation.y = c.rot; scene.add(model.g); cows.push(c); return c;
+}
+export function updateCow(c, dt){
+  const fy = c.gy;
+  // si el suelo cambió bajo la vaca (el jugador rompió o puso bloques), se reacomoda
+  const bx = Math.floor(c.x), bz = Math.floor(c.z);
+  if (getB(bx, fy, bz) !== 0){ let y = fy; while (y < WY-1 && getB(bx, y, bz) !== 0) y++; c.gy = y; }
+  else if (getB(bx, fy-1, bz) === 0){ let y = fy; while (y > 1 && getB(bx, y-1, bz) === 0) y--; c.gy = y; }
+  c.t -= dt;
+  if (c.state === 'idle'){ if (c.t <= 0){ if (Math.random() < 0.62){ const a = Math.random()*Math.PI*2, r = 2 + Math.random()*8; c.tx = clamp(p_cx(c) + Math.cos(a)*r, 2.5, WX-2.5); c.tz = clamp(p_cz(c) + Math.sin(a)*r, 2.5, WZ-2.5); c.state = 'walk'; c.t = 9; } else { c.state = 'graze'; c.t = 2.5 + Math.random()*2.5; } } }
+  else if (c.state === 'graze'){ if (c.t <= 0){ c.state = 'idle'; c.t = 1 + Math.random()*2.5; } }
+  else if (c.state === 'walk'){
+    const dx = c.tx - c.x, dz = c.tz - c.z, dist = Math.hypot(dx, dz);
+    if (dist < 0.35 || c.t <= 0){ c.state = 'idle'; c.t = 1 + Math.random()*3; }
+    else { const ux = dx/dist, uz = dz/dist, want = Math.atan2(ux, uz); let dr = want - c.rot; while (dr > Math.PI) dr -= Math.PI*2; while (dr < -Math.PI) dr += Math.PI*2; c.rot += clamp(dr, -3*dt, 3*dt);
+      if (Math.abs(dr) < 0.6){ const px = -uz, pz = ux; let ok = true;
+        for (const [f, s] of [[0.62, 0], [0.5, 0.33], [0.5, -0.33]]){ if (walkableY(c.x + ux*f + px*s, c.z + uz*f + pz*s, c.gy) == null){ ok = false; break; } }
+        if (ok){ const st = 1.25*dt; c.x += ux*st; c.z += uz*st; const g2 = walkableY(c.x, c.z, c.gy); if (g2 != null) c.gy = g2; c.phase += dt*7; }
+        else { c.state = 'idle'; c.t = 0.6 + Math.random(); } } }
+  }
+  c.y += (c.gy - c.y) * Math.min(1, dt*9);
+  if (c.bounce > 0) c.bounce = Math.max(0, c.bounce - dt*2.2);
+  const walking = c.state === 'walk', sw = walking ? Math.sin(c.phase)*0.55 : 0;
+  c.legs[0].rotation.x += (sw - c.legs[0].rotation.x)*Math.min(1, dt*14); c.legs[3].rotation.x = c.legs[0].rotation.x; c.legs[1].rotation.x = -c.legs[0].rotation.x; c.legs[2].rotation.x = -c.legs[0].rotation.x;
+  const wantTilt = c.state === 'graze' ? 0.95 + Math.sin(GS.playTime*6)*0.06 : (walking ? 0.06 : Math.sin(GS.playTime*0.8 + c.phase)*0.05); c.tilt += (wantTilt - c.tilt)*Math.min(1, dt*5); c.head.rotation.x = c.tilt;
+  c.tail.rotation.z = Math.sin(GS.playTime*2.4 + c.phase)*0.35; c.tail.rotation.x = -0.15;
+  c.group.position.set(c.x, c.y + Math.abs(Math.sin(c.bounce*Math.PI*2))*0.3*c.bounce, c.z); c.group.rotation.y = c.rot;
+}
+export const p_cx = c => c.p.center.x, p_cz = c => c.p.center.z;
+export function petCow(c){ sndMoo(COW_DEFS[c.vi].pitch); c.bounce = 1; const D = COW_DEFS[c.vi]; for (let i = 0; i < 7; i++) spawnP(TEX.heart, c.x + (Math.random()-0.5)*0.9, c.y + D.legH + D.body[1] + 0.3 + Math.random()*0.3, c.z + (Math.random()-0.5)*0.9, (Math.random()-0.5)*0.5, 1.1 + Math.random()*0.6, (Math.random()-0.5)*0.5, 1.3, 0.34, 0xff5a7a); }
+export const raycaster = new THREE.Raycaster();
+
+/* enlaces tardíos */
+late('COW_DEFS', () => COW_DEFS);
+late('spawnCow', () => spawnCow);
