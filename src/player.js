@@ -1,4 +1,5 @@
 /* JUGADOR: AABB 0.6×1.8×0.6 contra la grilla, selección con DDA */
+import { GS } from './state.js';
 import * as THREE from 'three';
 import { clamp } from './util.js';
 import { WX, WZ } from './blocks.js';
@@ -12,9 +13,9 @@ export function boxHits(px, py, pz){ const x0 = Math.floor(px-HW), x1 = Math.flo
   for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (getB(x, y, z)) return true; return false; }
 export function updatePlayer(dt){
   if (keys.ArrowLeft) player.yaw += 1.9*dt; if (keys.ArrowRight) player.yaw -= 1.9*dt; if (keys.ArrowUp) player.pitch += 1.3*dt; if (keys.ArrowDown) player.pitch -= 1.3*dt; player.pitch = clamp(player.pitch, -1.55, 1.55);
-  let f = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), s = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
-  const sn = Math.sin(player.yaw), cs = Math.cos(player.yaw); let wx = -sn*f + cs*s, wz = -cs*f - sn*s; const l = Math.hypot(wx, wz); if (l > 0){ wx /= l; wz /= l; }
-  const sp = (keys.ShiftLeft || keys.ShiftRight) ? 6.6 : 4.3, k = Math.min(1, (player.ground ? 14 : 5)*dt);
+  let f = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) + GS.joyF, s = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + GS.joyS;
+  const sn = Math.sin(player.yaw), cs = Math.cos(player.yaw); let wx = -sn*f + cs*s, wz = -cs*f - sn*s; const l = Math.hypot(wx, wz); if (l > 1){ wx /= l; wz /= l; }
+  const sp = (keys.ShiftLeft || keys.ShiftRight || Math.hypot(GS.joyF, GS.joyS) > 0.92) ? 6.6 : 4.3, k = Math.min(1, (player.ground ? 14 : 5)*dt);
   player.vx += (wx*sp - player.vx)*k; player.vz += (wz*sp - player.vz)*k; player.vy = Math.max(-19, player.vy - 26*dt);
   if (keys.Space && player.ground){ player.vy = 8.4; player.ground = false; }
   // resolución por eje: X, Z, Y

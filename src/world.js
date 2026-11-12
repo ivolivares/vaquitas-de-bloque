@@ -70,3 +70,7 @@ export const platH = [];
   PLAT_POS.forEach(([px, pz], i) => { for (let dx = 0; dx < 4; dx++) for (let dz = 0; dz < 5; dz++) setBRaw(px+dx, platH[i]-1, pz+dz, B.PLAT); });
 })();
 export function isProtected(x, y, z){ if (y === 0) return true; for (let i = 0; i < 3; i++){ const [px, pz] = PLAT_POS[i]; if (x >= px && x < px+4 && z >= pz && z < pz+5 && y <= platH[i]-1) return true; } return false; }
+
+/* bloques puestos por el jugador o por un cuatrero: ni vacas ni cuatreros pueden subirse a ellos */
+export const placed = new Set();
+export const bkey = (x, y, z) => x + z*64 + y*4096;

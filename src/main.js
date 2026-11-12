@@ -15,6 +15,13 @@ import './actions.js';
 import './prize.js';
 import './ui.js';
 import './debug.js';
+import * as adv from './adventure.js';
+import { refreshModeUI, updateAdventure } from './adventure.js';
+import { musicInfo, refreshMusicUI } from './music.js';
+import { LATE } from './state.js';
+import { bkey, placed } from './world.js';
+import './touch.js';
+import './share.js';
 import { DEBUG, GS } from './state.js';
 import { $ } from './util.js';
 import { dirty, getB, hmap, isProtected, setB } from './world.js';
@@ -29,11 +36,10 @@ import { buildPlush, orbit, prizeCam, prizeScene } from './prize.js';
 import { enterPrize, selectSlot, setState, showWin, state, updateCounter } from './ui.js';
 import { debugFlags, updateDebug } from './debug.js';
 
-try { if (window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(any-pointer: fine)').matches) $('touchNote').classList.remove('hidden'); } catch (e){}
 plats.forEach(registerCells);
 (function restore(){ const s = loadSave();
-  if (s){ plats.forEach((p, i) => { if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.every(p => p.done); GS.muted = !!s.mute; }
-  plats.forEach(p => evalPlatform(p, null)); GS.saveReady = true; updateCounter(); setMuted(GS.muted); setState('start'); })();
+  if (s){ plats.forEach((p, i) => { if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
+  plats.forEach(p => evalPlatform(p, null)); GS.saveReady = true; updateCounter(); setMuted(GS.muted); refreshModeUI(); refreshMusicUI(); setState('start'); })();
 syncCamera();
 export let last = performance.now(), fpsAcc = 0, fpsN = 0;
 export function frame(now){
@@ -42,7 +48,7 @@ export function frame(now){
   updateDebug(dt);
   if (state === 'prize'){ orbit.update(); renderer.render(prizeScene, prizeCam); return; }
   if (state === 'play'){
-    GS.playTime += dt; updatePlayer(dt); for (const c of cows) updateCow(c, dt); for (const p of plats) if (p.anim) updatePlatAnim(p, dt); updateParticles(dt); updateTarget();
+    GS.playTime += dt; updatePlayer(dt); for (const c of cows) updateCow(c, dt); for (const p of plats) if (p.anim) updatePlatAnim(p, dt); updateParticles(dt); updateTarget(); updateAdventure(dt);
     if (GS.winAt != null && GS.playTime >= GS.winAt){ GS.winAt = null; showWin(); }
     if (DEBUG){ fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5){ $('fps').textContent = Math.round(fpsN/fpsAcc) + ' fps'; fpsAcc = 0; fpsN = 0; } }
   }
@@ -53,4 +59,4 @@ export function frame(now){
 }
 requestAnimationFrame(frame);
 
-if (DEBUG) window.__vq = { flags: debugFlags, player, plats, cows, keys, getB, setB, actBreak, actPlace, debugComplete, enterPrize, selectSlot, raycastGrid, aim, eyeV, dirV, hmap, isProtected, buildPlush, renderer, chunkMesh, get state(){ return state; }, get playTime(){ return GS.playTime; }, get prizeUnlocked(){ return GS.prizeUnlocked; } };
+if (DEBUG) window.__vq = { GS, adv, placed, bkey, musicInfo, shareInfo: LATE.shareInfo, flags: debugFlags, player, plats, cows, keys, getB, setB, actBreak, actPlace, debugComplete, enterPrize, selectSlot, raycastGrid, aim, eyeV, dirV, hmap, isProtected, buildPlush, renderer, chunkMesh, get state(){ return state; }, get playTime(){ return GS.playTime; }, get prizeUnlocked(){ return GS.prizeUnlocked; } };

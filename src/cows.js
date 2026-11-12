@@ -1,4 +1,5 @@
 /* VACAS: modelos de cajas, texturas procedurales y comportamiento */
+import { bkey, placed } from './world.js';
 import * as THREE from 'three';
 import { GS, late } from './state.js';
 import { clamp, hash2, mul, pick, pxTex, vnoise } from './util.js';
@@ -73,12 +74,14 @@ export function buildCowModel(vi){
 }
 export const cows = [];
 export function walkableY(x, z, fy){ const bx = Math.floor(x), bz = Math.floor(z); if (bx < 1 || bx >= WX-1 || bz < 1 || bz >= WZ-1) return null;
-  for (const gy of [fy+1, fy, fy-1, fy-2]){ if (gy < 1 || getB(bx, gy-1, bz) === 0) continue; let clear = true; for (let y = gy; y <= Math.max(gy, fy) + 1; y++) if (getB(bx, y, bz) !== 0){ clear = false; break; } if (clear) return gy; } return null; }
+  for (const gy of [fy+1, fy, fy-1, fy-2]){ if (gy < 1 || getB(bx, gy-1, bz) === 0) continue; if (gy === fy+1 && placed.has(bkey(bx, gy-1, bz))) continue; let clear = true; for (let y = gy; y <= Math.max(gy, fy) + 1; y++) if (getB(bx, y, bz) !== 0){ clear = false; break; } if (clear) return gy; } return null; }
 export function spawnCow(p){
   const model = buildCowModel(p.i), c = { vi:p.i, p, group:model.g, legs:model.legs, head:model.head, tail:model.tail, x:p.center.x, z:p.center.z, y:p.H, gy:p.H, rot:Math.PI, state:'idle', t:1.5 + Math.random()*2, tx:0, tz:0, phase:Math.random()*6, bounce:0, tilt:0 };
   model.g.userData.cow = c; model.g.position.set(c.x, c.y, c.z); model.g.rotation.y = c.rot; scene.add(model.g); cows.push(c); return c;
 }
 export function updateCow(c, dt){
+  // robada: la mueve el cuatrero o espera triste en su corral
+  if (c.held){ c.state = 'idle'; c.t = 1; c.legs.forEach(l => { l.rotation.x *= 0.8; }); c.tilt += (0.4 - c.tilt)*Math.min(1, dt*5); c.head.rotation.x = c.tilt; c.y += (c.gy - c.y)*Math.min(1, dt*9); c.group.position.set(c.x, c.y, c.z); c.group.rotation.y = c.rot; return; }
   const fy = c.gy;
   // si el suelo cambió bajo la vaca (el jugador rompió o puso bloques), se reacomoda
   const bx = Math.floor(c.x), bz = Math.floor(c.z);

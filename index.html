@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Vaquitas de Bloque — arma 3 vacas de bloques y gana tu peluche</title>
 <meta name="description" content="Juego 3D gratis para el navegador: explora un mundo de bloques, rellena cada figura con el pelaje correcto, dale vida a 3 vacas y gana tu Ternerito Dorado. Se juega con teclado y mouse.">
 <meta name="author" content="Iván Olivares">
@@ -36,6 +36,8 @@
   <div id="counter"><span id="countTxt">Vacas 0/3</span></div>
   <div id="topright"><div id="muteTag"></div><div id="fps"></div></div>
   <div id="hint" class="hidden"></div>
+  <div id="dial" class="hidden"></div>
+  <div id="tip" class="hidden"></div>
   <div id="toast"></div>
   <div id="slotname"></div>
   <div id="hotbar"></div>
@@ -45,8 +47,12 @@
   <div class="panel">
     <h1>Vaquitas de Bloque</h1>
     <p>Sigue los <b>haces de luz</b>, rellena cada figura con el pelaje correcto y dale vida a <b>3 vacas</b>.<br>Mientras más rápido armes una vaca, más se parecerá tu premio a ella.</p>
-    <p id="touchNote" class="hidden" style="background:#ffe1b0;border:3px solid #f08a24;border-radius:6px;padding:6px 10px"><b>Este juego necesita teclado y mouse.</b><br>Ábrelo en un computador para jugar.</p>
-    <button class="big" id="btnStart">Click para jugar</button>
+    <div class="modes">
+      <div><button class="big" id="btnStart">Modo aventura</button><small>De noche llegan los cuatreros a robarte las vacas</small></div>
+      <div><button class="sec" id="btnStartFree">Modo libre</button><small>Construye tranquilo, sin cuatreros</small></div>
+    </div>
+    <p class="rot">Gira tu teléfono: se juega mejor en horizontal.</p>
+    <p class="touchOnly">Joystick para moverte · arrastra para mirar · botones para romper, poner y saltar</p>
     <table class="keys">
       <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Moverte</td></tr>
       <tr><td>Mouse</td><td>Mirar</td></tr>
@@ -62,7 +68,9 @@
     <h2>Pausa</h2>
     <button class="big" id="btnResume">Continuar</button><br>
     <button id="btnPrizePause" class="hidden">Ver mi premio</button>
-    <button class="sec" id="btnMute">Sonido: activado</button>
+    <button class="sec" id="btnMute">Sonidos: activados</button>
+    <button class="sec" id="btnMusic">Música: activada</button>
+    <button class="sec" id="btnMode">Modo: aventura</button>
     <table class="keys">
       <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Moverte</td></tr>
       <tr><td>Mouse (o flechas)</td><td>Mirar</td></tr>
@@ -70,8 +78,9 @@
       <tr><td><kbd>Shift</kbd></td><td>Correr</td></tr>
       <tr><td>Click izquierdo</td><td>Romper bloque / acariciar vaca</td></tr>
       <tr><td>Click derecho</td><td>Poner el bloque elegido</td></tr>
+      <tr><td>Click en un cuatrero</td><td>Marearlo (y rodearlo con 4 bloques)</td></tr>
       <tr><td><kbd>1</kbd>–<kbd>9</kbd> o rueda</td><td>Elegir material</td></tr>
-      <tr><td><kbd>M</kbd></td><td>Silenciar</td></tr>
+      <tr><td><kbd>M</kbd> / <kbd>N</kbd></td><td>Silenciar sonidos / música</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Pausa</td></tr>
     </table>
     <button class="warn" id="btnReset">Reiniciar progreso</button>
@@ -85,15 +94,23 @@
     <p id="winTimes"></p>
     <button class="big" id="btnPrizeWin">Ver mi premio</button><br>
     <button class="sec" id="btnKeep">Seguir jugando</button>
+    <div class="share" id="shareWin"></div>
   </div>
 </div>
 
 <div id="prizeUI" class="hidden">
   <div class="card"><h2>Ternerito Dorado</h2><p id="prizeSub"></p><p id="prizeTimes"></p></div>
-  <div class="bottom"><div class="tip" style="display:inline-block;background:rgba(255,248,232,.85);border-radius:6px;padding:2px 10px;margin-bottom:4px">Arrastra para girarlo · Rueda para acercarlo</div><br><button class="big" id="btnBack">Volver al mundo</button></div>
+  <div class="bottom"><div class="share" id="sharePrize"></div><div class="tip" style="display:inline-block;background:rgba(255,248,232,.85);border-radius:6px;padding:2px 10px;margin-bottom:4px">Arrastra para girarlo · Rueda para acercarlo</div><br><button class="big" id="btnBack">Volver al mundo</button></div>
 </div>
 <div id="dbg" class="hidden"></div>
 <div id="confetti"></div>
+<div id="touch">
+  <div id="joy"><div id="joyKnob"></div></div>
+  <button id="tPause" aria-label="Pausa">II</button>
+  <button id="tJump">Saltar</button>
+  <button id="tPlace">Poner</button>
+  <button id="tBreak">Romper</button>
+</div>
 <div class="credit left">Built because I didn't have cows in Minecraft Experience Santiago 🇨🇱</div>
 <div class="credit right">Built using Fable 5.2 by <a href="https://iolivares.com?from=vaquitas-de-bloque" target="_blank" rel="noopener">Iván Olivares</a></div>
 <noscript><p style="padding:20px;font-family:sans-serif">Vaquitas de Bloque necesita JavaScript para funcionar.</p></noscript>

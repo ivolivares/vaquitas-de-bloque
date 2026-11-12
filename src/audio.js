@@ -19,4 +19,6 @@ export function sndGood(){ tone('triangle', 660, 660, 0.1, 0.3); tone('triangle'
 export function sndBad(){ tone('square', 170, 120, 0.2, 0.18); }
 export function sndThud(){ tone('sine', 120, 70, 0.12, 0.4); }
 export function sndFanfare(){ [[523,0],[659,0.14],[784,0.28],[1047,0.44],[784,0.66],[1047,0.8]].forEach(([f, d], i) => { tone('square', f, f, i === 5 ? 0.7 : 0.16, 0.16, d); tone('triangle', f/2, f/2, i === 5 ? 0.7 : 0.16, 0.22, d); }); }
-export function setMuted(m){ GS.muted = m; if (master) master.gain.value = GS.muted ? 0 : 0.6; $('btnMute').textContent = 'Sonido: ' + (GS.muted ? 'silenciado' : 'activado'); $('muteTag').textContent = GS.muted ? 'Sonido silenciado (M)' : ''; LATE.writeSave(); }
+export function setMuted(m){ GS.muted = m; if (master) master.gain.value = GS.muted ? 0 : 0.6; $('btnMute').textContent = 'Sonidos: ' + (GS.muted ? 'silenciados' : 'activados'); $('muteTag').textContent = GS.muted ? 'Sonidos silenciados' : ''; LATE.writeSave(); }
+export function audioCtx(){ return actx; }
+

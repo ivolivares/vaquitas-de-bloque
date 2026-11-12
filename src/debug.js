@@ -1,4 +1,5 @@
 /* DEBUG: panel de condiciones (solo con DEBUG = true; F3 lo muestra u oculta) */
+import { LATE } from './state.js';
 import { DEBUG, GS } from './state.js';
 import { $, fmtTime } from './util.js';
 import { BLOCK_NAME } from './blocks.js';
@@ -16,8 +17,8 @@ export function debugFlags(){
   const vacas = plats.map((p, i) => { let ok = 0, bad = 0; if (!p.done) for (const c of p.cells){ const b = getB(c.x, c.y, c.z); if (b === c.mat) ok++; else if (b !== 0) bad++; }
     return { n:i + 1, nombre:p.V.name, completada:p.done, celdasCorrectas:p.done ? 14 : ok, celdasEquivocadas:bad, cronometroIniciado:p.startT != null, cronometro:(!p.done && p.startT != null) ? GS.playTime - p.startT : null, tiempoFinal:p.time, animando:!!p.anim, vacaViva:cows.some(c => c.p === p) }; });
   let guardado; try { guardado = localStorage.getItem(SAVE_KEY); } catch (e){ guardado = 'ERROR: ' + e.message; }
-  return { estado:state, mouseCapturado:document.pointerLockElement === canvas, modoSinCaptura:noLock, vacas, vacasCompletadas:plats.filter(p => p.done).length, premioDesbloqueado:GS.prizeUnlocked,
-    botonPremioPausa:!$('btnPrizePause').classList.contains('hidden'), pantallaVictoria:state === 'win', celebracionEn:GS.winAt != null ? GS.winAt - playTime : null, edicionPeluche:bestEdition(), pelucheConstruido:plushEdition,
+  return { aventura: LATE.advFlags ? LATE.advFlags() : null, tactil:GS.touch, musica:GS.musicOn, estado:state, mouseCapturado:document.pointerLockElement === canvas, modoSinCaptura:noLock, vacas, vacasCompletadas:plats.filter(p => p.done).length, premioDesbloqueado:GS.prizeUnlocked,
+    botonPremioPausa:!$('btnPrizePause').classList.contains('hidden'), pantallaVictoria:state === 'win', celebracionEn:GS.winAt != null ? GS.winAt - GS.playTime : null, edicionPeluche:bestEdition(), pelucheConstruido:plushEdition,
     tiempoJugado:GS.playTime, slot:GS.slot + 1, material:BLOCK_NAME[HOTBAR[GS.slot]], silenciado:GS.muted, audio:actx ? actx.state : 'sin iniciar', guardadoListo:GS.saveReady, guardado };
 }
 export function updateDebug(dt){
@@ -34,6 +35,7 @@ export function updateDebug(dt){
   h += 'pantalla de victoria: ' + yn(f.pantallaVictoria, 'VISIBLE', 'oculta') + '   celebración pendiente: ' + (f.celebracionEn != null ? '<span class="on">en ' + f.celebracionEn.toFixed(1) + ' s</span>' : '<span class="off">no</span>') + '\n';
   h += 'edición del peluche: <b>' + f.edicionPeluche + '</b>' + (f.pelucheConstruido ? ' (construido: ' + f.pelucheConstruido + ')' : '') + '\n';
   h += 'sonido: ' + (f.silenciado ? '<span class="warn">silenciado</span>' : '<span class="on">activo</span>') + '  audio: ' + f.audio + '\n';
+  if (LATE.advDebug) h += LATE.advDebug();
   h += 'guardado: ' + (f.guardado == null ? '<span class="off">vacío</span>' : String(f.guardado).startsWith('ERROR') ? '<span class="warn">' + f.guardado + '</span>' : f.guardado.replace(/</g, '&lt;'));
   $('dbg').innerHTML = h;
 }

@@ -47,3 +47,50 @@ kbd{ background:#fff; border:2px solid var(--cafe); border-radius:4px; padding:0
 .credit a{ color:#fff; text-decoration:underline; }
 .credit a:hover{ color:#f6d04a; }
 @media (max-width:900px){ .credit{ font-size:9px; } .credit.left{ max-width:58vw; overflow:hidden; text-overflow:ellipsis; } }
+
+/* --- modos, aventura, música y compartir --- */
+.modes{ display:flex; gap:10px; justify-content:center; align-items:flex-start; flex-wrap:wrap; margin:8px 0; }
+.modes > div{ display:flex; flex-direction:column; align-items:center; max-width:230px; }
+.modes small{ font-size:13px; line-height:1.25; }
+.modes .sec{ font-size:22px; padding:14px 24px; }
+.rot, .touchOnly{ display:none; font-size:14px; font-weight:bold; }
+#dial{ position:absolute; left:50%; top:12px; transform:translateX(-50%); background:var(--crema); border:4px solid var(--cafe); border-radius:6px; padding:4px 14px; box-shadow:0 4px 0 var(--sombra); font-weight:bold; font-size:17px; white-space:nowrap; }
+#dial.night{ background:#232a52; color:#fff; border-color:#0e1230; }
+#dial.warn{ background:#ffd9a0; animation:latido .6s infinite alternate; }
+@keyframes latido{ to{ transform:translateX(-50%) scale(1.07); } }
+#tip{ position:absolute; left:50%; top:58px; transform:translateX(-50%); background:#fff8dc; border:3px dashed var(--naranja); border-radius:6px; padding:5px 14px; font-weight:bold; font-size:15px; max-width:min(92vw,640px); text-align:center; }
+#toast{ top:24%; }
+.share{ display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:8px; pointer-events:auto; }
+.share:before{ content:"Compartir:"; align-self:center; font-weight:bold; font-size:14px; }
+.share button{ font-size:14px; padding:6px 12px; margin:0; border-width:3px; box-shadow:0 3px 0 var(--sombra); }
+.share .x{ background:#111; } .share .wa{ background:#1fa855; } .share .fb{ background:#1877f2; } .share .li{ background:#0a66c2; } .share .foto{ background:var(--cafe2); }
+#prizeUI .share{ margin-bottom:6px; }
+/* --- controles táctiles --- */
+#touch{ display:none; position:fixed; inset:0; z-index:12; pointer-events:none; }
+body[data-touch="1"][data-state="play"] #touch{ display:block; }
+#touch > *{ pointer-events:auto; touch-action:none; }
+#joy{ position:absolute; left:max(18px, env(safe-area-inset-left)); bottom:22px; width:128px; height:128px; border-radius:50%; background:rgba(255,243,214,.35); border:3px solid rgba(90,52,24,.7); }
+#joyKnob{ position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:rgba(255,243,214,.9); border:3px solid var(--cafe); pointer-events:none; }
+#touch button{ position:absolute; margin:0; padding:0; width:78px; height:78px; border-radius:50%; font-size:15px; background:rgba(88,168,58,.85); box-shadow:none; }
+#tBreak{ right:max(18px, env(safe-area-inset-right)); bottom:104px; background:rgba(194,85,58,.88) !important; }
+#tPlace{ right:max(104px, calc(env(safe-area-inset-right) + 86px)); bottom:36px; }
+#tJump{ right:max(18px, env(safe-area-inset-right)); bottom:18px; background:rgba(240,138,36,.88) !important; }
+#touch #tPause{ right:max(12px, env(safe-area-inset-right)); top:10px; width:46px; height:46px; border-radius:8px; background:rgba(90,52,24,.85); font-size:16px; }
+body[data-touch="1"] canvas#game{ touch-action:none; }
+body[data-touch="1"]{ overscroll-behavior:none; }
+body[data-touch="1"] table.keys{ display:none; }
+body[data-touch="1"] .touchOnly{ display:block; }
+body[data-touch="1"] .slot{ pointer-events:auto; width:44px; height:44px; }
+body[data-touch="1"] .slot canvas{ width:30px; height:30px; left:4px; top:4px; }
+body[data-touch="1"] #hotbar{ bottom:6px; }
+body[data-touch="1"] #slotname{ bottom:70px; font-size:14px; }
+body[data-touch="1"][data-state="play"] .credit{ display:none; }
+body[data-touch="1"] #topright{ right:66px; }
+@media (orientation:portrait){ body[data-touch="1"] .rot{ display:block; } }
+@media (max-height:520px){
+  .panel{ padding:10px 16px; } h1{ font-size:30px; } h2{ font-size:22px; margin-bottom:4px; } p{ font-size:14px; margin:4px 0; }
+  button.big{ font-size:20px; padding:9px 20px; } .modes .sec{ font-size:18px; padding:9px 18px; } table.keys{ font-size:12px; }
+  #counter{ font-size:14px; padding:3px 8px 2px; gap:5px; } #counter canvas{ width:42px; height:29px; }
+  #dial{ font-size:14px; top:8px; } #tip{ top:44px; font-size:13px; } #hint{ font-size:14px; } #toast{ font-size:16px; }
+  #prizeUI .card{ padding:4px 14px; } #prizeUI .card h2{ font-size:18px; } #prizeUI .card p{ font-size:12px; }
+}

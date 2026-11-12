@@ -59,7 +59,7 @@ export function updatePlatAnim(p, dt){
   if (a.t >= 1){ a.cubes.forEach(m => scene.remove(m)); p.anim = null;
     const cow = LATE.spawnCow(p); sndMoo(LATE.COW_DEFS[p.i].pitch); burst(TEX.spark, p.center.x, p.H + 1, p.center.z, 40, 4.5, () => [0xfff2a0, 0xffffff, 0x9dff8a, p.V.beam][Math.floor(Math.random()*4)], 0.32, 5, 1.1); cow.bounce = 1;
     LATE.toast('¡' + p.V.name + ' lista en ' + fmtTime(p.time) + '!');
-    if (plats.every(q => q.done) && !GS.prizeUnlocked){ GS.prizeUnlocked = true; $('btnPrizePause').classList.remove('hidden'); writeSave(); GS.winAt = GS.playTime + 1.8; } }
+    LATE.tryWin(); }
 }
 export function onEdit(x, y, z, placed){ for (const p of plats){ if (p.done) continue; const c = cellMap.get(cellKey(x, y, z)); const mine = c && c.p === p; if (mine && placed && p.startT == null) p.startT = GS.playTime; evalPlatform(p, mine && placed ? c : null); } }
 

@@ -3,8 +3,9 @@
 Juego 3D en primera persona para navegador de escritorio. Explora un pequeño mundo de bloques, rellena los 3 hologramas con el pelaje correcto para dar vida a 3 vacas y gana un peluche de colección: el Ternerito Dorado.
 
 - Código en módulos ES dentro de `src/`, empaquetado con Vite (Three.js 0.160.0 va incluido en el build, sin CDN).
-- Se juega con teclado y mouse; no tiene controles táctiles.
-- Modo debug: agrega `?debug=true` a la URL (panel de condiciones con F3, tecla K para completar la plataforma más cercana, contador de fps).
+- Se juega con teclado y mouse, o con controles táctiles en teléfonos y tablets.
+- Dos modos: aventura (de noche llegan cuatreros a robarte las vacas) y libre.
+- Modo debug: agrega `?debug=true` a la URL (panel de condiciones con F3, K completa la plataforma más cercana, L adelanta el anochecer, J el amanecer, contador de fps).
 
 ## Desarrollo
 
@@ -23,6 +24,9 @@ npm run build    # genera dist/ (lo mismo que corre Vercel en cada push a main)
 | `src/player.js`, `src/actions.js` | Física, selección de bloques (DDA), romper y poner |
 | `src/platforms.js`, `src/cows.js` | Hologramas, validación y vacas |
 | `src/prize.js` | Escena del peluche Ternerito Dorado |
+| `src/adventure.js` | Modo aventura: día y noche, cuatreros, corrales y tips |
+| `src/music.js` | Música chiptune sintetizada (4 temas de día y 1 de noche) |
+| `src/touch.js`, `src/share.js` | Controles táctiles y botones para compartir |
 | `src/ui.js`, `src/audio.js`, `src/save.js`, `src/debug.js` | HUD y menús, sonido, guardado y panel de debug |
 | `public/` | Favicon, íconos, imagen Open Graph, manifest, robots y sitemap |
 
@@ -36,4 +40,5 @@ npm run build    # genera dist/ (lo mismo que corre Vercel en cada push a main)
 | Click izquierdo | Romper bloque o acariciar vaca |
 | Click derecho | Poner bloque |
 | 1–9 o rueda | Elegir material |
-| M / Esc | Silenciar / pausa |
+| Click en un cuatrero | Marearlo para rodearlo con 4 bloques |
+| M / N / Esc | Silenciar sonidos / música / pausa |
