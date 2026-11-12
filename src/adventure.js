@@ -273,7 +273,7 @@ function startNight(){
   const fc = freeCows(), n = Math.min(cfg.perNight(nights, fc.length), cfg.maxActive - cuatreros.length); let made = 0;
   for (let i = 0; i < n; i++) if (spawnCuatrero(fc[i % fc.length], cfg.breakers && i === 0)) made++;
   cuatreros.forEach(u => { if (u.state === 'sleep') u.state = 'seek'; });
-  toast(cuatreros.length ? (made > 1 ? '¡Es de noche! Llegaron ' + made + ' cuatreros.' : made === 1 ? '¡Es de noche! Llegó un cuatrero.' : '¡Es de noche! Los cuatreros despertaron.') : 'Noche tranquila: no hay vacas que robar.' + (moved ? ' Mudaron a tu vaca a un corral más lejano y reforzado.' : ''));
+  toast((cuatreros.length ? (made > 1 ? '¡Es de noche! Llegaron ' + made + ' cuatreros.' : made === 1 ? '¡Es de noche! Llegó un cuatrero.' : '¡Es de noche! Los cuatreros despertaron.') : 'Noche tranquila: no hay vacas que robar.') + (moved ? ' Mudaron a tu vaca a un corral más lejano y reforzado.' : ''));
 }
 function startDay(){ phase = 'day'; clock = 0; warned = false; sndDawn(); toast(cuatreros.length ? '¡Amaneció! Los cuatreros duermen: es el momento de encerrarlos.' : '¡Amaneció!'); }
 function clearAdventure(){ cuatreros.slice().forEach(u => { burst(TEX.spark, u.x, u.y + 1, u.z, 12, 3, 0xffffff, 0.25, 4, 0.7); removeCuatrero(u); }); cows.forEach(c => { if (c.held) freeCow(c, true); }); corrals.slice().forEach(dropCorral); started = false; phase = 'day'; clock = 0; warned = false; troubleT = 0; $('tip').classList.add('hidden'); refreshCounter(); }
