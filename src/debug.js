@@ -15,7 +15,7 @@ import { canvas, noLock, state } from './ui.js';
 export let dbgOn = DEBUG, dbgAcc = 1;
 export function debugFlags(){
   const vacas = plats.map((p, i) => { let ok = 0, bad = 0; if (!p.done) for (const c of p.cells){ const b = getB(c.x, c.y, c.z); if (b === c.mat) ok++; else if (b !== 0) bad++; }
-    return { n:i + 1, nombre:p.V.name, completada:p.done, celdasCorrectas:p.done ? 14 : ok, celdasEquivocadas:bad, cronometroIniciado:p.startT != null, cronometro:(!p.done && p.startT != null) ? GS.playTime - p.startT : null, tiempoFinal:p.time, animando:!!p.anim, vacaViva:cows.some(c => c.p === p) }; });
+    return { n:i + 1, nombre:p.V.name, completada:p.done, celdas:p.cells.length, celdasCorrectas:p.done ? p.cells.length : ok, celdasEquivocadas:bad, cronometroIniciado:p.startT != null, cronometro:(!p.done && p.startT != null) ? GS.playTime - p.startT : null, tiempoFinal:p.time, animando:!!p.anim, vacaViva:cows.some(c => c.p === p) }; });
   let guardado; try { guardado = localStorage.getItem(SAVE_KEY); } catch (e){ guardado = 'ERROR: ' + e.message; }
   return { aventura: LATE.advFlags ? LATE.advFlags() : null, tactil:GS.touch, musica:GS.musicOn, estado:state, mouseCapturado:document.pointerLockElement === canvas, modoSinCaptura:noLock, vacas, vacasCompletadas:plats.filter(p => p.done).length, premioDesbloqueado:GS.prizeUnlocked,
     botonPremioPausa:!$('btnPrizePause').classList.contains('hidden'), pantallaVictoria:state === 'win', celebracionEn:GS.winAt != null ? GS.winAt - GS.playTime : null, edicionPeluche:bestEdition(), pelucheConstruido:plushEdition,
@@ -26,7 +26,7 @@ export function updateDebug(dt){
   const f = debugFlags(), yn = (v, a = 'SÍ', b = 'no') => v ? '<span class="on">' + a + '</span>' : '<span class="off">' + b + '</span>';
   let h = '<b>DEBUG</b> (F3 oculta · K completa la plataforma más cercana)\n';
   h += 'estado: <b>' + f.estado + '</b>   mouse capturado: ' + yn(f.mouseCapturado) + (f.modoSinCaptura ? '  <span class="warn">modo flechas</span>' : '') + '   t=' + fmtTime(f.tiempoJugado) + '\n';
-  f.vacas.forEach(v => { h += 'Vaquita ' + v.n + ' (' + v.nombre.replace('Vaca ', '') + '): ' + yn(v.completada, 'COMPLETADA', 'pendiente') + '  celdas ' + v.celdasCorrectas + '/14' + (v.celdasEquivocadas ? ' <span class="warn">(' + v.celdasEquivocadas + ' mal)</span>' : '')
+  f.vacas.forEach(v => { h += 'Vaquita ' + v.n + ' (' + v.nombre.replace('Vaca ', '') + '): ' + yn(v.completada, 'COMPLETADA', 'pendiente') + '  celdas ' + v.celdasCorrectas + '/' + v.celdas + (v.celdasEquivocadas ? ' <span class="warn">(' + v.celdasEquivocadas + ' mal)</span>' : '')
     + '  crono: ' + (v.completada ? (v.tiempoFinal == null ? 's/d' : v.tiempoFinal >= 999 ? 'K (999)' : fmtTime(v.tiempoFinal)) : v.cronometroIniciado ? '<span class="on">' + fmtTime(v.cronometro) + '…</span>' : '<span class="off">sin iniciar</span>')
     + (v.animando ? '  <span class="on">animando</span>' : '') + '  vaca viva: ' + yn(v.vacaViva) + '\n'; });
   h += 'vacas completadas: <b>' + f.vacasCompletadas + '/3</b>\n';

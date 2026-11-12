@@ -5,6 +5,7 @@ Juego 3D en primera persona para navegador de escritorio. Explora un pequeño mu
 - Código en módulos ES dentro de `src/`, empaquetado con Vite (Three.js 0.160.0 va incluido en el build, sin CDN).
 - Se juega con teclado y mouse, o con controles táctiles en teléfonos y tablets.
 - Dos modos: aventura (de noche llegan cuatreros a robarte las vacas) y libre.
+- Tres dificultades en aventura: fácil, difícil (bloques contados, noches largas, oleadas crecientes y un cuatrero que rompe cercas) y legendario (además vacas de 23 bloques, sin ayudas y corrales que se alejan).
 - Modo debug: agrega `?debug=true` a la URL (panel de condiciones con F3, K completa la plataforma más cercana, L adelanta el anochecer, J el amanecer, contador de fps).
 
 ## Desarrollo

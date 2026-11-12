@@ -51,9 +51,20 @@
     <h1>Vaquitas de Bloque</h1>
     <p>Sigue los <b>haces de luz</b>, rellena cada figura con el pelaje correcto y dale vida a <b>3 vacas</b>.<br>Mientras más rápido armes una vaca, más se parecerá tu premio a ella.</p>
     <p class="rot">↻ Gira tu teléfono: la experiencia es mucho mejor en horizontal.</p>
+    <div id="step1">
     <div class="modes">
-      <div><button class="big" id="btnStart">Modo aventura</button><small>De noche llegan los cuatreros a robarte las vacas</small></div>
+      <div><button class="big" id="btnStart">Modo aventura</button><small>De noche llegan los cuatreros a robarte las vacas. Tú eliges la dificultad.</small></div>
       <div><button class="sec" id="btnStartFree">Modo libre</button><small>Construye tranquilo, sin cuatreros</small></div>
+    </div>
+    </div>
+    <div id="step2" class="hidden">
+      <h2>Elige la dificultad</h2>
+      <div class="diffs">
+        <button class="diff sel" data-d="facil"><b>Fácil</b><small>Bloques infinitos y hasta 2 cuatreros por noche.</small></button>
+        <button class="diff" data-d="dificil"><b>Difícil</b><small>Bloques contados, noches largas, más cuatreros y uno que rompe cercas.</small></button>
+        <button class="diff" data-d="legendario"><b>Legendario</b><small>Además: vacas más grandes, sin ayudas y corrales que se alejan.</small></button>
+      </div>
+      <button class="big" id="btnPlay">Jugar</button> <button class="sec" id="btnBackStart">Volver</button>
     </div>
     <p id="iosTip" class="hidden">En iPhone, para jugar a pantalla completa: toca <b>Compartir</b> y luego <b>Agregar a pantalla de inicio</b>, y abre el juego desde ese ícono.</p>
     <p class="touchOnly">Joystick para moverte · arrastra para mirar · botones para romper, poner y saltar</p>

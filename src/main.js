@@ -29,17 +29,17 @@ import { buildChunk, camera, chunkMesh, clouds, renderer, scene, sky, updatePart
 import { setMuted } from './audio.js';
 import { loadSave } from './save.js';
 import { aim, dirV, eyeV, keys, player, raycastGrid, syncCamera, updatePlayer } from './player.js';
-import { badMat, evalPlatform, ghostMat, markDone, okMat, plats, registerCells, updatePlatAnim } from './platforms.js';
+import { badMat, evalPlatform, ghostMat, markDone, okMat, plats, registerCells, updatePlatAnim, setTemplate } from './platforms.js';
 import { cows, spawnCow, updateCow } from './cows.js';
 import { actBreak, actPlace, debugComplete, updateTarget } from './actions.js';
 import { buildPlush, orbit, prizeCam, prizeScene } from './prize.js';
 import { enterPrize, selectSlot, setState, showWin, state, updateCounter } from './ui.js';
 import { debugFlags, updateDebug } from './debug.js';
 
-plats.forEach(registerCells);
+setTemplate('base');
 (function restore(){ const s = loadSave();
-  if (s){ plats.forEach((p, i) => { if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
-  plats.forEach(p => evalPlatform(p, null)); GS.saveReady = true; updateCounter(); setMuted(GS.muted); refreshModeUI(); refreshMusicUI(); setState('start'); })();
+  if (s){ plats.forEach((p, i) => { if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; if (['facil', 'dificil', 'legendario'].includes(s.diff)) GS.diff = s.diff; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
+  plats.forEach(p => evalPlatform(p, null)); GS.saveReady = true; updateCounter(); setMuted(GS.muted); adv.applyDifficulty(); refreshMusicUI(); setState('start'); })();
 syncCamera();
 export let last = performance.now(), fpsAcc = 0, fpsN = 0;
 export function frame(now){

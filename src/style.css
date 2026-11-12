@@ -98,3 +98,12 @@ body[data-touch="1"] #topright{ right:66px; }
 #rotHint{ display:none; position:fixed; left:50%; top:64px; transform:translateX(-50%); z-index:13; background:#ffe1b0; border:3px solid var(--naranja); border-radius:6px; padding:5px 12px; font-weight:bold; font-size:14px; white-space:nowrap; pointer-events:none; }
 @media (orientation:portrait){ body[data-touch="1"][data-state="play"] #rotHint{ display:block; } }
 #iosTip{ font-size:13px; background:#eef4ff; border:2px solid #9db6e8; border-radius:6px; padding:6px 10px; }
+/* --- dificultades y bloques contados --- */
+.diffs{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:6px 0 10px; }
+.diff{ display:flex; flex-direction:column; gap:4px; width:150px; margin:0; padding:10px 8px; background:#e9d7ae; color:var(--cafe); font-size:19px; }
+.diff small{ font-size:12px; font-weight:normal; line-height:1.25; }
+.diff.sel{ background:var(--naranja); color:#fff; transform:translateY(-3px); box-shadow:0 0 0 3px #fff, 0 8px 0 var(--sombra); }
+.slot .cnt{ position:absolute; right:2px; bottom:0; font-style:normal; font-size:12px; font-weight:bold; color:#fff; text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000; z-index:1; }
+.slot.empty canvas{ filter:grayscale(1) brightness(.6); } .slot.empty .cnt{ color:#ff8a7a; }
+@media (max-height:520px){ .diff{ width:140px; padding:6px; font-size:16px; } .diff small{ font-size:11px; } }
+#start.picking table.keys, #start.picking .touchOnly, #start.picking #iosTip, #start.picking .panel > p{ display:none; }

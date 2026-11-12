@@ -51,7 +51,7 @@ function refreshFS(){ $('btnFS').textContent = 'Pantalla completa: ' + (isFS() ?
 if (canFS){
   $('btnFS').classList.remove('hidden'); $('btnFS').onclick = () => { wantFS = !isFS(); goFS(wantFS); };
   document.addEventListener('fullscreenchange', refreshFS); document.addEventListener('webkitfullscreenchange', refreshFS);
-  ['btnStart', 'btnStartFree', 'btnResume'].forEach(id => $(id).addEventListener('click', () => { if (GS.touch && wantFS) goFS(true); }));
+  ['btnStart', 'btnPlay', 'btnStartFree', 'btnResume'].forEach(id => $(id).addEventListener('click', () => { if (GS.touch && wantFS) goFS(true); }));
 }
 export function fsInfo(){ return { soportado: canFS, activo: isFS(), deseado: wantFS }; }
 /* iPhone: Safari no permite pantalla completa a las páginas; la alternativa es abrir el juego desde la pantalla de inicio */

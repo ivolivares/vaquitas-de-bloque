@@ -23,9 +23,7 @@ export function signTexture(name, done){ const c = mkCanvas(256, 96), g = c.getC
 export const plats = PLAT_POS.map(([px, pz], i) => {
   const V = VARIANTS[i], H = platH[i], p = { i, V, x:px, z:pz, H, done:false, time:null, startT:null, cells:[], anim:null, group:new THREE.Group() };
   scene.add(p.group);
-  TEMPLATE.forEach(tc => { const mat = tc[3 + i] ? V.b : V.a, cell = { x:px + tc[0], y:H + tc[1], z:pz + tc[2], mat, state:0, p };
-    cell.ghost = new THREE.Mesh(tileBoxGeo(BLOCK_TILES[mat][2], 0.9), ghostMat); cell.ghost.position.set(cell.x + 0.5, cell.y + 0.5, cell.z + 0.5); cell.ghost.add(new THREE.LineSegments(ghostEdgeGeo, ghostEdgeMat)); p.group.add(cell.ghost);
-    cell.over = new THREE.Mesh(overGeo, okMat); cell.over.position.copy(cell.ghost.position); cell.over.visible = false; p.group.add(cell.over); p.cells.push(cell); });
+  p.kind = null;
   // cartel + haz de luz, detrás de la plataforma
   const sx = px + 2, sz = pz + 5.7, sy = hmap[Math.floor(sx) + Math.floor(sz)*WX];
   const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.9, 0.16), new THREE.MeshBasicMaterial({ color:0x6b4222 })); post.position.set(sx, sy + 0.95, sz); scene.add(post);
@@ -37,6 +35,26 @@ export const plats = PLAT_POS.map(([px, pz], i) => {
   p.center = new THREE.Vector3(px + 2, H, pz + 2.5);
   return p;
 });
+/* plantillas: la base de 14 celdas y la grande de 23 (legendario), que suma lomo, cuernos de madera y cola */
+function templateCells(kind, i, V){
+  if (kind !== 'big') return TEMPLATE.map(tc => [tc[0], tc[1], tc[2], tc[3 + i] ? V.b : V.a]);
+  const out = [], A = V.a, Bm = V.b, W = 6 /* madera */, add = (x, y, z, m) => out.push([x, y, z, m]);
+  for (const [x, z] of [[1, 1], [2, 1], [1, 3], [2, 3]]) add(x, 0, z, i === 1 ? Bm : A);                                   // patas
+  for (let y = 1; y <= 2; y++) for (let z = 1; z <= 3; z++) for (let x = 1; x <= 2; x++){                                   // cuerpo de dos pisos
+    let m = A; if (i === 0 && z === 2) m = Bm; if (i === 2 && ((x === 1 && y === 1 && z === 1) || (x === 2 && y === 1 && z === 3) || (x === 2 && y === 2 && z === 2) || (x === 1 && y === 2 && z === 3))) m = Bm; add(x, y, z, m); }
+  for (let y = 2; y <= 3; y++) for (let x = 1; x <= 2; x++) add(x, y, 0, i === 2 && x === 1 && y === 3 ? Bm : A);           // cabeza
+  add(0, 3, 0, W); add(3, 3, 0, W);                                                                                         // cuernos
+  add(1, 2, 4, Bm);                                                                                                         // cola
+  return out;
+}
+export function setTemplate(kind){
+  for (const p of plats){ if (p.done || p.kind === kind) continue;
+    p.cells.forEach(c => { cellMap.delete(cellKey(c.x, c.y, c.z)); p.group.remove(c.ghost); p.group.remove(c.over); }); p.cells.length = 0; p.kind = kind; p.startT = null;
+    templateCells(kind, p.i, p.V).forEach(([dx, dy, dz, mat]) => { const cell = { x:p.x + dx, y:p.H + dy, z:p.z + dz, mat, state:0, p };
+      cell.ghost = new THREE.Mesh(tileBoxGeo(BLOCK_TILES[mat][2], 0.9), ghostMat); cell.ghost.position.set(cell.x + 0.5, cell.y + 0.5, cell.z + 0.5); cell.ghost.add(new THREE.LineSegments(ghostEdgeGeo, ghostEdgeMat)); p.group.add(cell.ghost);
+      cell.over = new THREE.Mesh(overGeo, okMat); cell.over.position.copy(cell.ghost.position); cell.over.visible = false; p.group.add(cell.over); p.cells.push(cell); });
+    registerCells(p); evalPlatform(p, null); }
+}
 export function registerCells(p){ p.cells.forEach(c => cellMap.set(cellKey(c.x, c.y, c.z), c)); }
 export function evalPlatform(p, feedbackCell){
   if (p.done) return; let ok = 0;
