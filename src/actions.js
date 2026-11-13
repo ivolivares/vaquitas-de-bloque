@@ -22,8 +22,8 @@ export function actBreak(){
   if (!hit.hit) return;
   if (isProtected(hit.x, hit.y, hit.z)){ sndThud(); LATE.toast('Ese bloque no se puede romper.'); return; }
   const key = bkey(hit.x, hit.y, hit.z), mine = placed.has(key) && !foreign.has(key), theirs = foreign.has(key);
-  const avg = tileAvg[BLOCK_TILES[hit.id][2]]; setB(hit.x, hit.y, hit.z, 0); placed.delete(key); foreign.delete(key); sndCrunch();
-  if (GS.inv){ let k = HOTBAR.indexOf(hit.id); if (k < 0) k = hit.id === B.GRASS ? 0 : (hit.id === B.LOG ? 2 : -1); if (k >= 0 && !theirs){
+  const avg = tileAvg[BLOCK_TILES[hit.id][2]]; setB(hit.x, hit.y, hit.z, 0); placed.delete(key); foreign.delete(key); sndCrunch(); if (!theirs && LATE.discover) LATE.discover(hit.id);
+  if (GS.inv){ let k = HOTBAR.indexOf(hit.id); if (k < 0) k = (hit.id === B.GRASS || hit.id === B.FLOWERS || hit.id === B.SAND) ? 0 : (hit.id === B.QUARTZ || hit.id === B.BRICK) ? 1 : (hit.id === B.LOG || hit.id === B.HAY || hit.id === B.PUMPKIN) ? 2 : -1; if (k >= 0 && !theirs){
       if (mine) GS.inv[k]++;                                                            // lo que tú pusiste siempre vuelve
       else if (GS.recover > 0){ GS.inv[k]++; GS.recover--; }                            // el terreno devuelve material hasta agotar el límite
       else if (GS.inv[0] + GS.inv[1] + GS.inv[2] < 4) GS.inv[k]++;                      // reserva mínima: siempre puedes juntar 4 bloques para encerrar a un cuatrero

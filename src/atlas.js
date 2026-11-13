@@ -4,7 +4,7 @@ import { hash2, mkCanvas, mul, pick, vnoise } from './util.js';
 import { B } from './blocks.js';
 
 /* --- atlas: tiles de 16x16 con 8 px de relleno extruido por lado --- */
-export const TILE = 16, PADPX = 8, CELL = 32, ATLAS_N = 4, ATLAS_PX = 128;
+export const TILE = 16, PADPX = 8, CELL = 32, ATLAS_N = 8, ATLAS_PX = 256;
 export const atlasCanvas = mkCanvas(ATLAS_PX, ATLAS_PX); export const ag = atlasCanvas.getContext('2d'); ag.imageSmoothingEnabled = false;
 export const T = {}, tileCanvas = [], tileAvg = [];
 export function makeTile(name, fn){   // si el nombre ya existe, lo redibuja en su mismo lugar (así se cambia de tema)
@@ -47,6 +47,7 @@ export function farmTheme(){
   makeTile('leaves', (x, y) => { const h = hash2(x, y, 61); if (h < 0.11) return [24,70,36]; if (h > 0.975) return [222,66,50]; return pick(PAL.leaf, vnoise(x/2.2, y/2.2, 62)*0.5 + h*0.5); });
   makeTile('wood', (x, y) => { const row = Math.floor(y/4); if (y % 4 === 3) return [132,88,48]; if (x === (row*5 + 3) % 16) return [144,98,54]; const n = hash2(x, row, 71)*0.5 + hash2(Math.floor(x/3), y, 72)*0.5; return pick([[178,128,72],[194,142,82],[208,158,94],[220,172,106]], n); });
   makeTile('plat', (x, y) => { const e = Math.min(x, y, 15-x, 15-y); if (e === 0) return [122,104,82]; if (e === 1) return [236,224,192]; if ((x === 3 || x === 12) && (y === 3 || y === 12)) return [240,180,60]; return pick([[196,182,152],[208,194,164],[218,206,176]], hash2(x,y,81)); });
+  if (T.flowers != null) makeTile('flowers', (x, y) => flowerPx(x, y, grassPx(x, y, 11)));
   if (atlasReady) atlasTex.needsUpdate = true;
 }
 let atlasReady = false;
@@ -65,6 +66,17 @@ atlasTex.magFilter = THREE.NearestFilter; atlasTex.minFilter = THREE.NearestMipm
 export const BLOCK_TILES = []; export const setBT = (id, top, bot, side) => BLOCK_TILES[id] = [T[top], T[bot], T[side]];
 setBT(B.GRASS,'grass_top','dirt','grass_side'); setBT(B.DIRT,'dirt','dirt','dirt'); setBT(B.STONE,'stone','stone','stone'); setBT(B.LOG,'log_top','log_top','log_side');
 setBT(B.LEAVES,'leaves','leaves','leaves'); setBT(B.WOOD,'wood','wood','wood'); setBT(B.PLAT,'plat','plat','plat');
+/* bloques que se descubren picando en modo libre */
+const flowerPx = (x, y, base) => { const c = hash2(Math.floor(x/2), Math.floor(y/2), 131); return (c < 0.3 && hash2(x, y, 132) < 0.8) ? pick([[255,92,122],[255,222,72],[250,250,250],[190,122,240]], hash2(Math.floor(x/2), Math.floor(y/2), 133)) : base; };
+makeTile('flowers', (x, y) => flowerPx(x, y, grassPx(x, y, 11)));
+makeTile('sand', (x, y) => hash2(x, y, 141) < 0.05 ? [188,160,104] : pick([[214,190,130],[226,204,146],[236,216,160],[244,226,176]], vnoise(x/3, y/3, 142)*0.55 + hash2(x, y, 143)*0.45));
+makeTile('hay_side', (x, y) => (y === 4 || y === 11) ? [128,86,44] : pick([[196,150,48],[214,170,60],[230,190,78],[242,208,100]], hash2(Math.floor(x/3), y, 151)*0.6 + hash2(x, y, 152)*0.4));
+makeTile('hay_top', (x, y) => { const r = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); return pick([[196,150,48],[214,170,60],[230,190,78],[242,208,100]], (Math.floor(r) % 2)*0.4 + hash2(x, y, 153)*0.6); });
+makeTile('quartz', (x, y) => { const n = vnoise(x/2.2, y/2.2, 161); if (n > 0.66) return n > 0.76 ? [246,242,255] : [216,194,244]; return pick(PAL.stone, vnoise(x/3, y/3, 41)*0.6 + hash2(x, y, 42)*0.4); });
+makeTile('pumpkin_side', (x, y) => (x % 4 === 0) ? [176,92,22] : pick([[214,116,26],[230,134,34],[242,152,46]], hash2(x, y, 171)*0.6 + (y < 3 ? 0.4 : 0)));
+makeTile('pumpkin_top', (x, y) => (Math.abs(x - 7.5) < 1.6 && Math.abs(y - 7.5) < 1.6) ? [86,128,52] : ((x + y) % 5 === 0 ? [176,92,22] : pick([[214,116,26],[230,134,34],[242,152,46]], hash2(x, y, 172))));
+makeTile('brick', (x, y) => { const row = Math.floor(y/8), off = row % 2 ? 4 : 0, bx = Math.floor((x + off)/8); if (y % 8 === 7 || (x + off) % 8 === 7) return [104,88,74]; const k = 0.94 + hash2(x, y, 182)*0.12, c = pick([[150,128,104],[166,142,116],[182,158,130]], hash2(bx, row, 181)); return [c[0]*k, c[1]*k, c[2]*k]; });
+setBT(B.SAND,'sand','sand','sand'); setBT(B.FLOWERS,'flowers','dirt','grass_side'); setBT(B.HAY,'hay_top','hay_top','hay_side'); setBT(B.QUARTZ,'quartz','quartz','quartz'); setBT(B.PUMPKIN,'pumpkin_top','pumpkin_top','pumpkin_side'); setBT(B.BRICK,'brick','brick','brick');
 setBT(B.ROYAL,'royal','royal','royal'); setBT(B.BLACK,'black','black','black'); setBT(B.WHITE,'white','white','white'); setBT(B.RUST,'rust','rust','rust'); setBT(B.BROWN,'brown','brown','brown'); setBT(B.LAVENDER,'lavender','lavender','lavender'); setBT(B.SLATE,'slate','slate','slate');
 export function tileRect(idx){ const ax = (idx % ATLAS_N) * CELL + PADPX, ay = Math.floor(idx / ATLAS_N) * CELL + PADPX; return [ax / ATLAS_PX, 1 - (ay + TILE) / ATLAS_PX, TILE / ATLAS_PX, TILE / ATLAS_PX]; } // u0, v0(abajo), du, dv
 
@@ -73,7 +85,7 @@ export function castleTheme(){
   const moss = [[38,84,62],[48,102,70],[62,120,76],[80,138,84],[104,154,92]], peat = [[52,38,34],[66,48,40],[82,60,48],[98,74,58],[114,88,68]];
   const mossPx = (x, y, s) => { if (hash2(x, y, s+2) < 0.035) return [176,116,206]; if (hash2(x, y, s+3) < 0.02) return [226,196,90]; return pick(moss, vnoise(x/2.6, y/2.6, s)*0.55 + hash2(x, y, s+1)*0.45); };
   const peatPx = (x, y, s) => { if (hash2(x, y, s+3) < 0.04) return [140,132,126]; return pick(peat, vnoise(x/2.4, y/2.4, s)*0.6 + hash2(x, y, s+1)*0.4); };
-  makeTile('grass_top', (x, y) => mossPx(x, y, 311));
+  makeTile('grass_top', (x, y) => mossPx(x, y, 311)); makeTile('flowers', (x, y) => flowerPx(x, y, mossPx(x, y, 311)));
   makeTile('grass_side', (x, y) => { const d = 2 + Math.round(vnoise(x/1.7, 3.3, 331)*3 + hash2(x, 1, 332)*1.6); if (y < d) return y === d-1 ? mul(mossPx(x, y, 315), 0.78) : mossPx(x, y, 315); if (y === d) return mul(peatPx(x, y, 321), 0.62); if (y === d+1) return mul(peatPx(x, y, 321), 0.84); return peatPx(x, y, 321); });
   makeTile('dirt', (x, y) => peatPx(x, y, 321));
   makeTile('stone', (x, y) => { const row = Math.floor(y/4), off = row % 2 ? 4 : 0, bx = Math.floor((x + off)/8); if (y % 4 === 3 || (x + off) % 8 === 7) return [66,64,72]; if (hash2(x, y, 402) < 0.045) return [84,122,78];

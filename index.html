@@ -43,6 +43,7 @@
   <div id="tip" class="hidden"></div>
   <div id="toast"></div>
   <div id="recover" class="hidden"></div>
+  <button id="bagBtn" aria-label="Mochila">🎒<kbd>E</kbd></button>
   <div id="slotname"></div>
   <div id="hotbar"></div>
 </div>
@@ -80,6 +81,16 @@
   </div>
 </div>
 
+<div id="bag" class="overlay hidden">
+  <div class="panel">
+    <h2>🎒 Tu mochila</h2>
+    <p id="bagCount"></p>
+    <p class="bagHelp">Pica bloques nuevos para descubrirlos. Elige una casilla y luego el bloque que quieres llevar.</p>
+    <div id="bagSlots"></div>
+    <div id="bagGrid"></div>
+    <button class="big" id="btnBagClose">Volver al juego</button>
+  </div>
+</div>
 <div id="pause" class="overlay hidden">
   <div class="panel">
     <h2>Pausa</h2>
@@ -94,6 +105,7 @@
       <tr><td>Mouse (o flechas)</td><td>Mirar</td></tr>
       <tr><td><kbd>Espacio</kbd></td><td>Saltar</td></tr>
       <tr><td><kbd>Shift</kbd></td><td>Correr</td></tr>
+      <tr><td><kbd>E</kbd></td><td>Mochila (modo libre)</td></tr>
       <tr><td>Click izquierdo</td><td>Romper bloque / acariciar vaca</td></tr>
       <tr><td>Click derecho</td><td>Poner el bloque elegido</td></tr>
       <tr><td>Click en un cuatrero</td><td>Marearlo (y rodearlo con 4 bloques)</td></tr>

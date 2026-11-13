@@ -317,7 +317,7 @@ export function refreshInv(){ [...$('hotbar').children].forEach((el, k) => { let
   const r = $('recover'); r.classList.toggle('hidden', GS.recover == null); if (GS.recover != null) r.textContent = '⛏ Puedes recuperar ' + GS.recover + ' bloques del terreno'; }
 /* reglas que dependen del modo, la dificultad y el mapa (sin tocar el inventario) */
 export function applyRules(){ const adv = GS.mode === 'aventura', cfg = CFG();
-  refreshLock(); setTemplate(adv && cfg.big ? 'big' : 'base'); GS.noAids = adv && !cfg.aids; corrals.forEach(c => { c.beam.visible = cfg.aids && GS.world === 1; });
+  if (LATE.applyHotbar) LATE.applyHotbar(); refreshLock(); setTemplate(adv && cfg.big ? 'big' : 'base'); GS.noAids = adv && !cfg.aids; corrals.forEach(c => { c.beam.visible = cfg.aids && GS.world === 1; });
   if (GS.inv){ while (GS.inv.length < HOTBAR.length) GS.inv.push(0);
     const r = plats[3]; if (r && r.cells.length && !royalGiven && !cfg.earnFur){ royalGiven = true; needOf(r).forEach((v, k) => { if (k >= 3 && v) GS.inv[k] += v + 2; }); } }   // material para la Vaca Real al desbloquearla
   refreshInv(); refreshModeUI(); }

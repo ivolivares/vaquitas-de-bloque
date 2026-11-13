@@ -23,6 +23,7 @@ import { bkey, placed } from './world.js';
 import './touch.js';
 import './share.js';
 import './records.js';
+import './bag.js';
 import { setWorld, updatePortal } from './portal.js';
 import { DEBUG, GS } from './state.js';
 import { $ } from './util.js';
@@ -42,7 +43,7 @@ setTemplate('base');
 (function restore(){ const s = loadSave();
   if (s && s.world === 2) setWorld(2, false);
   if (s && s.cows[3]) ensureRoyal();   // la Vaca Real se conserva aunque hayas guardado estando en la granja
-  if (s){ GS.crown = !!s.crown; plats.forEach((p, i) => { if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.slice(0, 3).every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; if (['facil', 'dificil', 'legendario'].includes(s.diff)) GS.diff = s.diff; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
+  if (s){ GS.crown = !!s.crown; if (Array.isArray(s.unlocked)) GS.unlocked = s.unlocked; if (Array.isArray(s.hot)) GS.hot = s.hot; plats.forEach((p, i) => { if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.slice(0, 3).every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; if (['facil', 'dificil', 'legendario'].includes(s.diff)) GS.diff = s.diff; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
   plats.forEach(p => evalPlatform(p, null)); GS.saveReady = true; updateCounter(); setMuted(GS.muted); adv.applyDifficulty(); refreshMusicUI(); setState('start'); })();
 syncCamera();
 export let last = performance.now(), fpsAcc = 0, fpsN = 0;

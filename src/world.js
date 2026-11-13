@@ -67,20 +67,27 @@ export function generateWorld(w){
   for (let z = 0; z < WZ; z++) for (let x = 0; x < WX; x++){
     const h = H(x, z); const slope = Math.max(Math.abs(H(x+1,z)-h), Math.abs(H(x-1,z)-h), Math.abs(H(x,z+1)-h), Math.abs(H(x,z-1)-h));
     const rocky = slope >= 2 || (slope >= 1 && h > 18 && hash2(x, z, 5) < 0.5);
-    for (let y = 0; y < h; y++){ let id = B.STONE; if (!rocky){ if (y === h-1) id = B.GRASS; else if (y >= h-4) id = B.DIRT; } else if (y >= h-2 && hash2(x, z + y*7, 6) < 0.18) id = B.DIRT; setBRaw(x, y, z, id); }
+    for (let y = 0; y < h; y++){ let id = B.STONE; if (!rocky){ if (y === h-1) id = B.GRASS; else if (y >= h-4) id = B.DIRT; } else if (y >= h-2 && hash2(x, z + y*7, 6) < 0.18) id = B.DIRT;
+      if (id === B.STONE && y > 0 && hash2(x + y*31, z - y*17, 9 + S) < 0.045) id = B.QUARTZ;                                    // vetas de cuarzo
+      if (!rocky && h <= 6 && y >= h-2 && vnoise(x*0.16, z*0.16, 12 + S) > 0.52) id = B.SAND;                                 // arenales en las zonas bajas
+      else if (id === B.GRASS && hash2(x, z, 13 + S) < 0.03) id = B.FLOWERS;                                                 // manchones de flores
+      setBRaw(x, y, z, id); }
   }
   if (w === 2){   // ruinas del castillo: muralla almenada con puertas y brechas, y cuatro torres
-    const col = (x, z, hgt) => { const b = H(x, z); for (let y = b; y < b + hgt && y < WY; y++) setBRaw(x, y, z, B.STONE); };
+    const col = (x, z, hgt) => { const b = H(x, z); for (let y = b; y < b + hgt && y < WY; y++) setBRaw(x, y, z, B.BRICK); };
     for (let x = 23; x <= 41; x++) for (let z = 22; z <= 40; z++){ if (x !== 23 && x !== 41 && z !== 22 && z !== 40) continue;
       if (((z === 22 || z === 40) && Math.abs(x - 32) <= 1) || ((x === 23 || x === 41) && Math.abs(z - 31) <= 1)) continue;        // puertas
       col(x, z, hash2(x, z, 77) < 0.14 ? 1 : 3 + ((x + z) % 2)); }
-    { const R = RETURN, b = H(R.x, R.z); for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++){ if (dx && dz) for (let y = b; y < b + 3; y++) setBRaw(R.x + dx, y, R.z + dz, B.STONE); setBRaw(R.x + dx, b + 3, R.z + dz, (dx || dz) ? B.STONE : B.WOOD); } }   // casita del regreso: cuatro pilares y techo
+    { const R = RETURN, b = H(R.x, R.z); for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++){ if (dx && dz) for (let y = b; y < b + 3; y++) setBRaw(R.x + dx, y, R.z + dz, B.BRICK); setBRaw(R.x + dx, b + 3, R.z + dz, (dx || dz) ? B.BRICK : B.WOOD); } }   // casita del regreso: cuatro pilares y techo
     for (const [tx, tz] of [[23, 22], [41, 22], [23, 40], [41, 40]]) for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) col(tx + dx, tz + dz, 7 + ((dx + dz + 2) % 2));
   }
   if (w === 1){   // la casa de la llave: una pieza de madera de 3×3×2 enterrada bajo el punto de inicio
     const K = KEYROOM; for (let x = K.x - 2; x <= K.x + 2; x++) for (let z = K.z - 2; z <= K.z + 2; z++) for (let y = K.y - 1; y <= K.y + 2; y++){
       const inside = Math.abs(x - K.x) <= 1 && Math.abs(z - K.z) <= 1 && y >= K.y && y <= K.y + 1; setBRaw(x, y, z, inside ? 0 : B.WOOD); }
   }
+  { // fardos de heno y zapallos sueltos por la pradera
+    const r2 = mulberry32(777 + S); let n = 0; for (let i = 0; i < 400 && n < 18; i++){ const x = 3 + Math.floor(r2()*58), z = 3 + Math.floor(r2()*58), h = H(x, z); const top = getB(x, h-1, z);
+      if ((top !== B.GRASS && top !== B.FLOWERS) || getB(x, h, z) !== 0 || flats.some(f => x > f.x0-2 && x < f.x1+2 && z > f.z0-2 && z < f.z1+2) || Math.hypot(x - SPAWN.x, z - SPAWN.z) < 4) continue; setBRaw(x, h, z, n % 2 ? B.PUMPKIN : B.HAY); n++; } }
   // árboles
   const rnd = mulberry32(20240612 + S), trees = [];
   for (let n = 0; n < 220 && trees.length < W.trees; n++){
