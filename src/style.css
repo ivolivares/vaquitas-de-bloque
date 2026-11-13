@@ -107,6 +107,7 @@ body[data-touch="1"] #topright{ right:66px; }
 .slot.empty canvas{ filter:grayscale(1) brightness(.6); } .slot.empty .cnt{ color:#ff8a7a; }
 @media (max-height:520px){ .diff{ width:140px; padding:6px; font-size:16px; } .diff small{ font-size:11px; } }
 #start.picking table.keys, #start.picking .touchOnly, #start.picking #iosTip, #start.picking .panel > p{ display:none; }
+#savedNote{ font-size:14px; background:#ffe1b0; border:2px solid var(--naranja); border-radius:6px; padding:6px 10px; } #savedNote button{ font-size:13px; padding:4px 10px; margin:2px 0 0 6px; }
 /* --- récords, recuperación y portal --- */
 .rec{ font-weight:bold !important; color:#8a5a12; min-height:1em; } .diff.sel .rec{ color:#fff; }
 #recover{ position:absolute; left:50%; bottom:106px; transform:translateX(-50%); background:rgba(90,52,24,.85); color:#fff; border-radius:6px; padding:2px 10px; font-size:13px; font-weight:bold; white-space:nowrap; }

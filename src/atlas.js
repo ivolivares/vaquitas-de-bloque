@@ -36,15 +36,21 @@ export const PAL = {
 export function grassPx(x, y, s){ const n = vnoise(x/2.6, y/2.6, s)*0.55 + hash2(x, y, s+1)*0.45; if (hash2(x, y, s+2) < 0.03) return [164,214,80]; if (hash2(x, y, s+3) < 0.04) return [44,112,44]; return pick(PAL.grass, n); }
 export function dirtPx(x, y, s){ if (hash2(x, y, s+3) < 0.035) return [196,170,134]; if (y > 0 && hash2(x, y-1, s+3) < 0.035) return [62,36,22];
   if (hash2(x, y, s+4) < 0.02) return [112,104,100]; const n = vnoise(x/2.4, y/2.4, s)*0.6 + hash2(x, y, s+1)*0.4; return pick(PAL.dirt, n); }
-makeTile('grass_top', (x, y) => grassPx(x, y, 11));
-makeTile('grass_side', (x, y) => { const d = 2 + Math.round(vnoise(x/1.7, 3.3, 31)*3 + hash2(x, 1, 32)*1.6); if (y < d) return y === d-1 ? mul(grassPx(x, y, 15), 0.78) : grassPx(x, y, 15); if (y === d) return mul(dirtPx(x, y, 21), 0.62); if (y === d+1) return mul(dirtPx(x, y, 21), 0.84); return dirtPx(x, y, 21); });
-makeTile('dirt', (x, y) => dirtPx(x, y, 21));
-makeTile('stone', (x, y) => { const cr = Math.abs(vnoise(x/3.5, y/3.5, 43) - 0.5); if (cr < 0.028) return [70,66,72]; if (cr < 0.06 && hash2(x,y,44) < 0.5) return [168,164,152]; return pick(PAL.stone, vnoise(x/3, y/3, 41)*0.6 + hash2(x, y, 42)*0.4); });
-makeTile('log_side', (x, y) => { if (hash2(x, 0, 53) < 0.22) return hash2(x, y, 54) < 0.8 ? [52,34,22] : PAL.bark[1]; return pick(PAL.bark, hash2(x, Math.floor((y + hash2(x,0,51)*9)/5), 52)*0.75 + hash2(x,y,55)*0.25); });
-makeTile('log_top', (x, y) => { const r = Math.max(Math.abs(x-7.5), Math.abs(y-7.5)); if (r > 6.6) return pick(PAL.bark, hash2(x,y,56)); return (Math.floor(r) % 2) ? [176,134,80] : [206,168,108]; });
-makeTile('leaves', (x, y) => { const h = hash2(x, y, 61); if (h < 0.11) return [24,70,36]; if (h > 0.975) return [222,66,50]; return pick(PAL.leaf, vnoise(x/2.2, y/2.2, 62)*0.5 + h*0.5); });
-makeTile('wood', (x, y) => { const row = Math.floor(y/4); if (y % 4 === 3) return [132,88,48]; if (x === (row*5 + 3) % 16) return [144,98,54]; const n = hash2(x, row, 71)*0.5 + hash2(Math.floor(x/3), y, 72)*0.5; return pick([[178,128,72],[194,142,82],[208,158,94],[220,172,106]], n); });
-makeTile('plat', (x, y) => { const e = Math.min(x, y, 15-x, 15-y); if (e === 0) return [122,104,82]; if (e === 1) return [236,224,192]; if ((x === 3 || x === 12) && (y === 3 || y === 12)) return [240,180,60]; return pick([[196,182,152],[208,194,164],[218,206,176]], hash2(x,y,81)); });
+/* tema del primer mapa (la granja); se puede volver a aplicar al regresar del Reino de Piedra */
+export function farmTheme(){
+  makeTile('grass_top', (x, y) => grassPx(x, y, 11));
+  makeTile('grass_side', (x, y) => { const d = 2 + Math.round(vnoise(x/1.7, 3.3, 31)*3 + hash2(x, 1, 32)*1.6); if (y < d) return y === d-1 ? mul(grassPx(x, y, 15), 0.78) : grassPx(x, y, 15); if (y === d) return mul(dirtPx(x, y, 21), 0.62); if (y === d+1) return mul(dirtPx(x, y, 21), 0.84); return dirtPx(x, y, 21); });
+  makeTile('dirt', (x, y) => dirtPx(x, y, 21));
+  makeTile('stone', (x, y) => { const cr = Math.abs(vnoise(x/3.5, y/3.5, 43) - 0.5); if (cr < 0.028) return [70,66,72]; if (cr < 0.06 && hash2(x,y,44) < 0.5) return [168,164,152]; return pick(PAL.stone, vnoise(x/3, y/3, 41)*0.6 + hash2(x, y, 42)*0.4); });
+  makeTile('log_side', (x, y) => { if (hash2(x, 0, 53) < 0.22) return hash2(x, y, 54) < 0.8 ? [52,34,22] : PAL.bark[1]; return pick(PAL.bark, hash2(x, Math.floor((y + hash2(x,0,51)*9)/5), 52)*0.75 + hash2(x,y,55)*0.25); });
+  makeTile('log_top', (x, y) => { const r = Math.max(Math.abs(x-7.5), Math.abs(y-7.5)); if (r > 6.6) return pick(PAL.bark, hash2(x,y,56)); return (Math.floor(r) % 2) ? [176,134,80] : [206,168,108]; });
+  makeTile('leaves', (x, y) => { const h = hash2(x, y, 61); if (h < 0.11) return [24,70,36]; if (h > 0.975) return [222,66,50]; return pick(PAL.leaf, vnoise(x/2.2, y/2.2, 62)*0.5 + h*0.5); });
+  makeTile('wood', (x, y) => { const row = Math.floor(y/4); if (y % 4 === 3) return [132,88,48]; if (x === (row*5 + 3) % 16) return [144,98,54]; const n = hash2(x, row, 71)*0.5 + hash2(Math.floor(x/3), y, 72)*0.5; return pick([[178,128,72],[194,142,82],[208,158,94],[220,172,106]], n); });
+  makeTile('plat', (x, y) => { const e = Math.min(x, y, 15-x, 15-y); if (e === 0) return [122,104,82]; if (e === 1) return [236,224,192]; if ((x === 3 || x === 12) && (y === 3 || y === 12)) return [240,180,60]; return pick([[196,182,152],[208,194,164],[218,206,176]], hash2(x,y,81)); });
+  if (atlasReady) atlasTex.needsUpdate = true;
+}
+let atlasReady = false;
+farmTheme();
 makeTile('black', (x, y) => { const c = vnoise(x/1.6, y/1.6, 91); return pick(PAL.black, c*0.7 + hash2(x,y,92)*0.3); });
 makeTile('white', (x, y) => pick(PAL.white, vnoise(x/2, y/2, 93)*0.65 + hash2(x,y,94)*0.35));
 makeTile('rust', (x, y) => pick(PAL.rust, hash2(x, Math.floor((y + hash2(x,0,95)*11)/6), 96)*0.7 + hash2(x,y,97)*0.3));
@@ -53,7 +59,7 @@ makeTile('lavender', (x, y) => pick(PAL.lav, vnoise(x/3, y/3, 101)*0.7 + hash2(x
 makeTile('slate', (x, y) => { const r = Math.hypot(x-7.5, y-8); if (r > 3.6 && r < 5.2) return (x + y < 15) ? PAL.slate[0] : PAL.slate[3]; if (r <= 3.6) return pick(PAL.slate, 0.25 + hash2(x,y,104)*0.3); return pick(PAL.slate, 0.35 + vnoise(x/2.5,y/2.5,103)*0.45 + hash2(x,y,105)*0.2); });
 
 makeTile('royal', (x, y) => ((x + y) % 8 === 0 || (x - y + 16) % 8 === 0) ? [236,190,70] : pick([[92,44,132],[108,54,150],[124,66,168],[140,80,184]], vnoise(x/2.5, y/2.5, 111)*0.6 + hash2(x,y,112)*0.4));
-export const atlasTex = new THREE.CanvasTexture(atlasCanvas);
+export const atlasTex = new THREE.CanvasTexture(atlasCanvas); atlasReady = true;
 atlasTex.magFilter = THREE.NearestFilter; atlasTex.minFilter = THREE.NearestMipmapLinearFilter; atlasTex.colorSpace = THREE.SRGBColorSpace;
 /* [tapa, base, lados] por id de bloque */
 export const BLOCK_TILES = []; export const setBT = (id, top, bot, side) => BLOCK_TILES[id] = [T[top], T[bot], T[side]];

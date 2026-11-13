@@ -3,12 +3,12 @@ import * as THREE from 'three';
 import { DEBUG, GS, LATE, late } from './state.js';
 import { $, fmtTime, hash2, pxTex } from './util.js';
 import { B, WY } from './blocks.js';
-import { bkey, foreign, getB, hmap, inWorld, isProtected, PLAT_POS, placed, setB } from './world.js';
+import { bkey, foreign, getB, hmap, inWorld, isProtected, KEYROOM, PLAT_POS, placed, RETURN, setB, topY } from './world.js';
 import { burst, chunkMat, clouds, scene, sky, spawnP, sunLight, TEX } from './render.js';
 import { sndCrunch, sndGood, sndMoo, sndPop, tone } from './audio.js';
-import { writeSave } from './save.js';
+import { resetSave, writeSave } from './save.js';
 import { boxHits, cellMap, dirV, eyeV, HW, PH, player } from './player.js';
-import { plats, setTemplate } from './platforms.js';
+import { plats, refreshLock, setTemplate } from './platforms.js';
 import { HOTBAR } from './actions.js';
 import { COW_DEFS, cows, raycaster, walkableY } from './cows.js';
 import { lock, silCanvas, state, toast } from './ui.js';
@@ -25,7 +25,7 @@ const CFG = () => (GS.mode === 'aventura' && DIFFS[GS.diff]) || DIFFS.facil;
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 let started = false, phase = 'day', clock = 0, warned = false, nights = 0, trappedN = 0;
-let digTold = false, truceT = 0, troubleT = 0, tipT = 0, tipI = 0, uiT = 0, stunHintShown = false;
+let digTold = false, royalGiven = false, crewT = 0, crewSpawnT = 0, pushTold = false, lockTold = false, troubleT = 0, tipT = 0, tipI = 0, uiT = 0, stunHintShown = false;
 export const cuatreros = [];
 export const corrals = [];
 
@@ -98,8 +98,9 @@ function bfs(sx, sz, sgy, isGoal, limit = 1800, relax = false){ const step = rel
 }
 function pathFrom(res){ const p = []; let k = res.goal; while (k != null && k !== -1){ p.push([k % 64, Math.floor(k/64)]); k = res.par.get(k); } p.reverse(); p.shift(); return p; }
 const cowName = c => c.p.V.name;
-const freeCows = () => cows.filter(c => !c.held);
-const awake = () => phase === 'night';
+const freeCows = () => cows.filter(c => !c.held && c.w === 1);
+const awake = () => phase === 'night' || GS.world === 2;   // en el Reino de Piedra no duermen
+const here = () => cuatreros.filter(u => u.w === GS.world);
 
 function spawnCuatrero(cow, breaker){
   const far = (x, z) => Math.hypot(x - player.x, z - player.z) > 9;
@@ -109,8 +110,11 @@ function spawnCuatrero(cow, breaker){
     for (let i = 0; i < 400 && cand.length < 12; i++){ const x = 3 + Math.floor(Math.random()*58), z = 3 + Math.floor(Math.random()*58), d = Math.hypot(x - cow.x, z - cow.z), h = hmap[x + z*64];
       if (d >= 13 && d <= 26 && far(x, z) && !nearPlatform(x, z, 2) && stepY(x, z, h) === h && !res.gyOf.has(x + z*64)){ res.gyOf.set(x + z*64, h); cand.push([x, z]); } } }
   if (!cand.length) return null;
-  const [x, z] = cand[Math.floor(Math.random()*cand.length)], m = buildCuatrero(nights - 1 + cuatreros.length, breaker);
-  const u = { g:m.g, legs:m.legs, arms:m.arms, head:m.head, x:x + 0.5, z:z + 0.5, gy:res.gyOf.get(x + z*64), y:0, rot:0, state:'seek', breaker:!!breaker, brk:null, stunCd:0, t:0, rp:0, chk:0.3, lost:0, stun:0, path:[], cow:null, target:null, site:null, phase:Math.random()*6, zz:0 };
+  const [x, z] = cand[Math.floor(Math.random()*cand.length)]; return makeCuatrero(x, z, res.gyOf.get(x + z*64), breaker);
+}
+function makeCuatrero(x, z, gy, breaker){
+  const m = buildCuatrero(nights + cuatreros.length, breaker);
+  const u = { w:GS.world, role:null, pushCd:0, g:m.g, legs:m.legs, arms:m.arms, head:m.head, x:x + 0.5, z:z + 0.5, gy, y:0, rot:0, state:'seek', breaker:!!breaker, brk:null, stunCd:0, t:0, rp:0, chk:0.3, lost:0, stun:0, path:[], cow:null, target:null, site:null, phase:Math.random()*6, zz:0 };
   u.y = u.gy; m.g.userData.cuatrero = u; scene.add(m.g); cuatreros.push(u); burst(TEX.spark, u.x, u.y + 1, u.z, 14, 2.5, 0xffd27a, 0.25, 3, 0.7); return u;
 }
 function removeCuatrero(u){ scene.remove(u.g); const i = cuatreros.indexOf(u); if (i >= 0) cuatreros.splice(i, 1); }
@@ -215,6 +219,7 @@ function updateCuatrero(u, dt){
       if (!awake() || getB(b.x, b.y, b.z) === 0) u.brk = null;
       else if (b.t <= 0){ setB(b.x, b.y, b.z, 0); placed.delete(bkey(b.x, b.y, b.z)); burst(TEX.sq, b.x + 0.5, b.y + 0.5, b.z + 0.5, 10, 2.4, 0xc8935a, 0.16, 10, 0.6); sndCrunch(); u.brk = null; u.rp = 0; if (!u.brokeMsg){ u.brokeMsg = true; toast('¡El cuatrero de pañuelo negro rompe tus cercas!'); } }
     }
+    else if (u.w === 2 && (u.state === 'seek' || u.state === 'guard')) updateRaider(u, dt);
     else if (u.state === 'seek' || u.state === 'guard'){
       if (!awake()){ u.state = 'sleep'; u.path = []; }
       else {
@@ -263,13 +268,13 @@ export function collideCharacters(){
   const push = (cx, cz, cy, r, h) => { if (player.y >= cy + h || player.y + PH <= cy) return; const dx = player.x - cx, dz = player.z - cz, d = Math.hypot(dx, dz), min = r + HW; if (d >= min) return;
     const nx = Math.max(HW, Math.min(64 - HW, d > 0.001 ? cx + dx/d*min : cx + min)), nz = Math.max(HW, Math.min(64 - HW, d > 0.001 ? cz + dz/d*min : cz));
     if (!boxHits(nx, player.y, player.z)) player.x = nx; if (!boxHits(player.x, player.y, nz)) player.z = nz; };
-  for (const c of cows){ const D = COW_DEFS[c.vi]; push(c.x, c.z, c.y, 0.55, D.legH + D.body[1]); }
-  for (const u of cuatreros) push(u.x, u.z, u.y, 0.32, 1.85);
+  for (const c of cows) if (c.w === GS.world){ const D = COW_DEFS[c.vi]; push(c.x, c.z, c.y, 0.55, D.legH + D.body[1]); }
+  for (const u of here()) push(u.x, u.z, u.y, 0.32, 1.85);
 }
 /* click (o Romper) sobre un cuatrero: queda mareado unos segundos */
 export function hitCuatrero(maxT){
-  if (!cuatreros.length) return false; raycaster.set(eyeV, dirV); raycaster.near = 0; raycaster.far = maxT;
-  const hits = raycaster.intersectObjects(cuatreros.map(u => u.g), true); if (!hits.length) return false;
+  const list = here(); if (!list.length) return false; raycaster.set(eyeV, dirV); raycaster.near = 0; raycaster.far = maxT;
+  const hits = raycaster.intersectObjects(list.map(u => u.g), true); if (!hits.length) return false;
   let o = hits[0].object; while (o && !o.userData.cuatrero) o = o.parent; if (!o) return false; const u = o.userData.cuatrero;
   if (u.state !== 'trapped' && u.stunCd > 0 && !(u.stun > 0)){ toast('Todavía no puedes marearlo otra vez.'); return true; }
   if (u.state !== 'trapped'){ const c = CFG(); u.stun = c.stun; u.stunCd = c.stun + c.stunCd; u.brk = null; sndStun(); if (!stunHintShown){ stunHintShown = true; toast('¡Lo mareaste! Rodéalo con 4 bloques antes de que se le pase.'); } }
@@ -281,17 +286,16 @@ export function hitCuatrero(maxT){
    --------------------------------------------------------------------- */
 function startNight(){
   phase = 'night'; clock = 0; nights++; sndNight();
+  if (GS.world === 2){ toast(here().length ? '¡Es de noche en el reino!' : 'Cae la noche en el reino.'); return; }   // aquí no hay vacas que robar
   const cfg = CFG(); let moved = 0; if (cfg.moveCorral) corrals.slice().forEach(c => { if (relocateCorral(c)) moved++; });
-  const mult = GS.world === 2 && GS.diff !== 'facil' ? 1.5 : 1;   // el Reino de Piedra es más peligroso en difícil y legendario
-  const fc = freeCows(), n = Math.min(Math.ceil(cfg.perNight(nights, fc.length)*mult), Math.min(10, Math.ceil(cfg.maxActive*mult)) - cuatreros.length); let made = 0;
+  const fc = freeCows(), n = Math.min(cfg.perNight(nights, fc.length), cfg.maxActive - cuatreros.length); let made = 0;
   for (let i = 0; i < n; i++) if (spawnCuatrero(fc[i % fc.length], cfg.breakers && i === 0)) made++;
   cuatreros.forEach(u => { if (u.state === 'sleep') u.state = 'seek'; });
   toast((cuatreros.length ? (made > 1 ? '¡Es de noche! Llegaron ' + made + ' cuatreros.' : made === 1 ? '¡Es de noche! Llegó un cuatrero.' : '¡Es de noche! Los cuatreros despertaron.') : 'Noche tranquila: no hay vacas que robar.') + (moved ? ' Mudaron a tu vaca a un corral más lejano y reforzado.' : ''));
 }
-function startDay(){ phase = 'day'; clock = 0; warned = false; sndDawn(); toast(cuatreros.length ? '¡Amaneció! Los cuatreros duermen: es el momento de encerrarlos.' : '¡Amaneció!'); }
-export function startTruce(sec){ clearAdventure(); truceT = sec; }
-export function clearAdventure(){ cuatreros.slice().forEach(u => { burst(TEX.spark, u.x, u.y + 1, u.z, 12, 3, 0xffffff, 0.25, 4, 0.7); removeCuatrero(u); }); cows.forEach(c => { if (c.held) freeCow(c, true); }); corrals.slice().forEach(dropCorral); started = false; phase = 'day'; clock = 0; warned = false; troubleT = 0; $('tip').classList.add('hidden'); refreshCounter(); }
-export function isTense(){ return GS.mode === 'aventura' && !GS.prizeUnlocked && phase === 'night' && cuatreros.length > 0; }
+function startDay(){ phase = 'day'; clock = 0; warned = false; sndDawn(); toast(GS.world === 2 ? '¡Amaneció!' : cuatreros.length ? '¡Amaneció! Los cuatreros duermen: es el momento de encerrarlos.' : '¡Amaneció!'); }
+export function clearAdventure(){ cuatreros.slice().forEach(u => { burst(TEX.spark, u.x, u.y + 1, u.z, 12, 3, 0xffffff, 0.25, 4, 0.7); removeCuatrero(u); }); cows.forEach(c => { if (c.held) freeCow(c, true); }); corrals.slice().forEach(dropCorral); clearBunker(); crewT = 0; started = false; phase = 'day'; clock = 0; warned = false; troubleT = 0; $('tip').classList.add('hidden'); refreshCounter(); }
+export function isTense(){ if (GS.mode !== 'aventura') return false; return GS.world === 2 ? here().length > 0 : (!GS.prizeUnlocked && phase === 'night' && here().length > 0); }
 /* se gana con las 3 vacas armadas y ninguna robada */
 export function tryWin(){
   if (GS.prizeUnlocked || !plats.slice(0, 3).every(p => p.done) || plats.some(p => p.anim)) return;
@@ -310,15 +314,24 @@ function grantFur(){ for (const p of plats){ if (p.done) continue; const need = 
     for (let k = 3; k < need.length; k++) if (need[k] > GS.inv[k]){ const tot = p.cells.filter(c => c.mat === HOTBAR[k]).length; GS.inv[k] += Math.min(need[k] - GS.inv[k] + 1, Math.ceil(tot/2) + 1); } return p; } return null; }
 export function refreshInv(){ [...$('hotbar').children].forEach((el, k) => { let c = el.querySelector('.cnt'); if (!c){ c = document.createElement('em'); c.className = 'cnt'; el.append(c); } c.textContent = GS.inv ? GS.inv[k] : ''; el.classList.toggle('empty', !!GS.inv && GS.inv[k] <= 0); });
   const r = $('recover'); r.classList.toggle('hidden', GS.recover == null); if (GS.recover != null) r.textContent = '⛏ Puedes recuperar ' + GS.recover + ' bloques del terreno'; }
+/* reglas que dependen del modo, la dificultad y el mapa (sin tocar el inventario) */
+export function applyRules(){ const adv = GS.mode === 'aventura', cfg = CFG();
+  refreshLock(); setTemplate(adv && cfg.big ? 'big' : 'base'); GS.noAids = adv && !cfg.aids; corrals.forEach(c => { c.beam.visible = cfg.aids && GS.world === 1; });
+  if (GS.inv){ while (GS.inv.length < HOTBAR.length) GS.inv.push(0);
+    const r = plats[3]; if (r && r.cells.length && !royalGiven && !cfg.earnFur){ royalGiven = true; needOf(r).forEach((v, k) => { if (k >= 3 && v) GS.inv[k] += v + 2; }); } }   // material para la Vaca Real al desbloquearla
+  refreshInv(); refreshModeUI(); }
+/* al elegir modo o dificultad (y al cargar): reglas + inventario inicial */
 export function applyDifficulty(){ const adv = GS.mode === 'aventura', cfg = CFG();
-  setTemplate(adv && cfg.big ? 'big' : 'base'); GS.noAids = adv && !cfg.aids; GS.inv = adv && cfg.limited ? initialInv(cfg) : null; GS.recover = adv && cfg.limited ? cfg.recover : null; corrals.forEach(c => { c.beam.visible = cfg.aids; }); refreshInv(); refreshModeUI(); }
+  GS.inv = null; applyRules(); royalGiven = !!(plats[3] && plats[3].cells.length); GS.inv = adv && cfg.limited ? initialInv(cfg) : null; GS.recover = adv && cfg.limited ? cfg.recover : null; refreshInv(); }
 export function refreshModeUI(){ $('btnMode').textContent = 'Modo: ' + (GS.mode === 'aventura' ? 'aventura (' + CFG().label + ')' : 'libre'); if (GS.mode !== 'aventura') $('dial').classList.add('hidden');
   document.querySelectorAll('.diff').forEach(b => b.classList.toggle('sel', b.dataset.d === GS.diff)); }
 $('btnMode').onclick = () => setMode(GS.mode === 'aventura' ? 'libre' : 'aventura');
 /* menú de inicio: aventura -> dificultad -> jugar */
 const showStep = n => { $('step1').classList.toggle('hidden', n !== 1); $('step2').classList.toggle('hidden', n !== 2); $('start').classList.toggle('picking', n === 2); };
 let pickDiff = null;
-$('btnStart').onclick = () => { pickDiff = GS.diff; refreshModeUI(); showStep(2); };
+$('btnStart').onclick = () => { pickDiff = GS.diff; refreshModeUI(); const n = plats.slice(0, 3).filter(p => p.done).length, any = n > 0 || GS.world === 2 || (plats[3] && plats[3].done);
+  $('savedNote').classList.toggle('hidden', !any); $('savedTxt').textContent = 'Tienes una partida guardada (' + n + '/3 vacas' + (GS.world === 2 ? ', en el Reino de Piedra' : '') + '). Al jugar, continúas desde ahí.'; showStep(2); };
+$('btnNew').onclick = () => { resetSave(); GS.saveReady = false; try { location.reload(); } catch (e){} };
 document.querySelectorAll('.diff').forEach(b => { b.onclick = () => { pickDiff = b.dataset.d; document.querySelectorAll('.diff').forEach(o => o.classList.toggle('sel', o === b)); }; });
 $('btnBackStart').onclick = () => showStep(1);
 $('btnPlay').onclick = () => { GS.mode = 'aventura'; setDifficulty(pickDiff || GS.diff); applyDifficulty(); writeSave(); showStep(1); lock(); };
@@ -331,38 +344,113 @@ const TIPS = {
   fence: () => 'Tip: una cerca de bloques alrededor de tus vacas las protege; los cuatreros no pueden saltarla.',
 };
 export function updateAdventure(dt){
-  const on = GS.mode === 'aventura' && !GS.prizeUnlocked;
-  if (!on){ applyLight(Math.min(1, GS.daylight + dt*0.5)); return; }
-  if (truceT > 0){ truceT -= dt; applyLight(1); const dial = $('dial'); dial.classList.remove('hidden', 'night', 'warn'); dial.textContent = '🕊 Tregua: los cuatreros vuelven en ' + fmtTime(truceT);
-    if (truceT <= 0) toast('Se acabó la tregua. ¡Cuidado con los cuatreros!'); return; }
-  if (!started && cows.length){ started = true; phase = 'day'; clock = 0; warned = false; toast('¡Tu primera vaca! Cuidado: de noche salen los cuatreros.'); }
+  const royal = plats[3], w2 = GS.world === 2;
+  // la aventura sigue en el primer mapa hasta ganar; en el Reino de Piedra (difícil y legendario), hasta armar la Vaca Real
+  const on = GS.mode === 'aventura' && (w2 ? (GS.diff !== 'facil' && !(royal && royal.done)) : !GS.prizeUnlocked);
+  if (w2 && royal && royal.locked && !lockTold && Math.hypot(player.x - royal.center.x, player.z - royal.center.z) < 7){ lockTold = true; toast('La Vaca Real está bloqueada: arma primero tus otras 3 vacas.'); }
+  if (!on){ applyLight(Math.min(1, GS.daylight + dt*0.5)); if (w2 && GS.mode === 'aventura'){ const dial = $('dial'); dial.classList.remove('hidden', 'night', 'warn'); dial.textContent = royal && royal.done ? '👑 El reino está en paz' : '🕊 Reino en paz'; } return; }
+  if (!started && (w2 || cows.length)){ started = true; phase = 'day'; clock = 0; warned = false; if (!w2) toast('¡Tu primera vaca! Cuidado: de noche salen los cuatreros.'); }
   let d = 1, rem = 0;
   if (started){
     clock += dt;
-    if (phase === 'day'){ rem = CFG().day - clock; if (rem <= WARN && !warned){ warned = true; sndWarn(); toast('¡Se hace de noche en ' + WARN + ' segundos! Vienen los cuatreros.'); } if (rem <= 0){ startNight(); rem = CFG().night; } }
+    if (phase === 'day'){ rem = CFG().day - clock; if (!w2 && rem <= WARN && !warned){ warned = true; sndWarn(); toast('¡Se hace de noche en ' + WARN + ' segundos! Vienen los cuatreros.'); } if (rem <= 0){ startNight(); rem = CFG().night; } }
     else { rem = CFG().night - clock; if (rem <= 0){ startDay(); rem = CFG().day; } }
     d = phase === 'day' ? Math.max(0, Math.min(1, rem/12)) : Math.max(0, Math.min(1, 1 - rem/8));
   }
   applyLight(d);
-  for (const u of cuatreros.slice()) updateCuatrero(u, dt);
-  for (const c of corrals.slice()) if (!c.cols.length || c.cols.some(col => col.ys.every(y => getB(col.x, y, col.z) === 0))) freeCow(c.cow);   // basta abrir una columna completa
+  // los que te siguen por el portal llegan unos segundos después
+  for (const u of cuatreros) if (u.followAt != null && GS.playTime >= u.followAt){ u.followAt = null; if (u.w !== GS.world) arrive(u); }
+  if (w2) updateCrew(dt);
+  for (const u of cuatreros.slice()) if (u.w === GS.world) updateCuatrero(u, dt);
+  if (!w2) for (const c of corrals.slice()) if (!c.cols.length || c.cols.some(col => col.ys.every(y => getB(col.x, y, col.z) === 0))) freeCow(c.cow);   // basta abrir una columna completa
   // HUD: reloj y tips
   uiT -= dt;
   if (uiT <= 0){ uiT = 0.25; const dial = $('dial'); dial.classList.remove('hidden'); dial.classList.toggle('night', phase === 'night' && started); dial.classList.toggle('warn', started && phase === 'day' && rem <= WARN);
-    dial.textContent = !started ? '☀️ Arma tu primera vaca' : (phase === 'day' ? '☀️ Noche en ' + fmtTime(rem) : '🌙 Amanece en ' + fmtTime(rem)) + (cuatreros.length ? ' · 🤠 ' + cuatreros.length : ''); }
-  const robbed = cows.some(c => c.held), trouble = robbed || cuatreros.length > 0;
+    const n = here().length; dial.textContent = (w2 && crewT > 0) ? '🕊 Tregua: los cuatreros del reino llegan en ' + fmtTime(crewT) : (!started ? '☀️ Arma tu primera vaca' : (phase === 'day' ? '☀️ Noche en ' + fmtTime(rem) : '🌙 Amanece en ' + fmtTime(rem)) + (n ? ' · 🤠 ' + n : '')); }
+  const robbed = cows.some(c => c.held), trouble = !w2 && (robbed || cuatreros.length > 0);
   if (!trouble){ if (troubleT > 0){ troubleT = 0; $('tip').classList.add('hidden'); } }
   else { troubleT += dt; if (troubleT >= 60 && CFG().aids){ tipT -= dt; if (tipT <= 0){ tipT = 10; const keys = []; if (corrals.length) keys.push('corral'); if (cuatreros.length){ keys.push('stun'); if (phase === 'day') keys.push('day'); } keys.push('fence'); const el = $('tip'); el.textContent = TIPS[keys[tipI++ % keys.length]](); el.classList.remove('hidden'); } } }
 }
 
+/* ---------------------------------------------------------------------
+   Reino de Piedra: los cuatreros te siguen, te empujan y, en legendario, le construyen un búnker a la Vaca Real
+   --------------------------------------------------------------------- */
+const TRUCE = 180, CREW = 3;
+/* punto de llegada de cada mapa: junto a la casa de la llave o a la casita de regreso */
+function arrivalSpot(){ const [x, z] = GS.world === 2 ? [RETURN.x, RETURN.z - 2] : [KEYROOM.x + 3, KEYROOM.z]; return [x, z, topY(x, z)]; }
+function arrive(u){ const [x, z, y] = arrivalSpot(), o = cuatreros.filter(v => v.w === GS.world).length;
+  if (u.cow) freeCow(u.cow, true); u.cow = null; u.target = null; u.site = null; u.brk = null; u.digq = null; u.path = []; u.stun = 0;
+  u.w = GS.world; u.x = x + 0.5 + (o % 3 - 1); u.z = z + 0.5 + (Math.floor(o/3) % 3 - 1)*0.9; u.gy = u.y = topY(Math.floor(u.x), Math.floor(u.z)); u.state = 'seek'; u.rp = 0; u.g.visible = true;
+  burst(TEX.spark, u.x, u.y + 1, u.z, 16, 3, 0xff8a6a, 0.28, 4, 0.8); sndAlarm(); if (!u.followTold){ u.followTold = true; toast('¡Un cuatrero te siguió por el portal!'); } }
+/* al cambiar de mapa: se muestran los de ese mapa; en difícil y legendario, los que quedaban te persiguen */
+export function onWorldChange(from, to, live){
+  for (const u of cuatreros) u.g.visible = u.w === to;
+  if (live && GS.mode === 'aventura' && GS.diff !== 'facil'){ let k = 0; for (const u of cuatreros) if (u.w === from && u.state !== 'trapped') u.followAt = GS.playTime + 4 + (k++)*1.6; }
+  if (to === 2 && live && CFG().dig && crewT <= 0 && !cuatreros.some(u => u.role === 'crew')){ const locked = !plats.slice(0, 3).every(p => p.done); crewT = !GS.visited2 && locked ? TRUCE : 20; }   // tregua larga solo la primera vez y si aún no puedes armar la Vaca Real
+  if (to === 2) GS.visited2 = true; lockTold = false; applyRules(); refreshCounter(); uiT = 0;
+}
+export function debugSkipTruce(){ crewT = 0.01; crewSpawnT = 0; }
+/* celdas del búnker: un muro alrededor de la plataforma y un techo encima */
+let bunker = null;
+function bunkerCells(){ const p = plats[3]; if (!p) return []; if (bunker && bunker.p === p && bunker.H === p.H) return bunker.cells;
+  const cells = []; for (let y = p.H; y <= p.H + 5; y++) for (let x = p.x - 1; x <= p.x + 4; x++) for (let z = p.z - 1; z <= p.z + 5; z++){ const wall = x === p.x - 1 || x === p.x + 4 || z === p.z - 1 || z === p.z + 5; if (y === p.H + 5 || wall) cells.push({ x, y, z, cool:0 }); }
+  bunker = { p, H:p.H, cells }; return cells; }
+function clearBunker(){ bunker = null; }
+function bunkerInfo(){ if (!bunker) return 'sin iniciar'; return bunker.cells.filter(c => getB(c.x, c.y, c.z) !== 0).length + '/' + bunker.cells.length; }
+function nextBunkerCell(){ for (const c of bunkerCells()){ if (getB(c.x, c.y, c.z) !== 0){ c.had = true; continue; }
+    if (c.had){ c.had = false; c.cool = GS.playTime + 8; }                                   // lo rompiste: tardan en reponerlo
+    if (c.cool > GS.playTime || cellMap.has(bkey(c.x, c.y, c.z))) continue;
+    if (player.x - HW < c.x + 1 && player.x + HW > c.x && player.y < c.y + 1 && player.y + PH > c.y && player.z - HW < c.z + 1 && player.z + HW > c.z) continue;   // nunca sobre ti
+    if (cuatreros.some(u => u.w === 2 && Math.floor(u.x) === c.x && Math.floor(u.z) === c.z && c.y >= u.gy && c.y <= u.gy + 1)) continue;
+    return c; } return null; }
+/* cuadrilla del reino (legendario): aparece tras la tregua y se repone de a uno */
+function updateCrew(dt){
+  const p = plats[3]; if (!CFG().dig || !p || p.done) return;
+  if (crewT > 0){ crewT -= dt; if (crewT <= 0) toast('Se acabó la tregua: los cuatreros del reino vienen a encerrar a la Vaca Real.'); return; }
+  crewSpawnT -= dt; const crew = cuatreros.filter(u => u.w === 2 && u.role === 'crew'); if (crew.length >= CREW || crewSpawnT > 0) return;
+  crewSpawnT = crew.length ? 20 : 2.5;
+  for (let i = 0; i < 60; i++){ const a = Math.random()*Math.PI*2, r = 13 + Math.random()*7, x = Math.floor(p.center.x + Math.cos(a)*r), z = Math.floor(p.center.z + Math.sin(a)*r); if (x < 3 || x > 60 || z < 3 || z > 60) continue;
+    const h = topY(x, z); if (stepY(x, z, h) !== h || Math.hypot(x - player.x, z - player.z) < 6) continue; const u = makeCuatrero(x, z, h, crew.length === 0); u.role = 'crew'; if (!u.crewTold && !crew.length) toast('¡Llegaron los cuatreros del reino! Quieren encerrar la plataforma de la Vaca Real.'); return; }
+}
+function updateRaider(u, dt){
+  if (u.pushCd > 0) u.pushCd -= dt;
+  const p = plats[3], building = u.role === 'crew' && !u.breaker && p && !p.done;   // el de pañuelo negro siempre va por ti
+  const cell = building ? nextBunkerCell() : null;
+  if (cell){   // construir: se acerca a la plataforma y va cerrando el búnker
+    const near = Math.hypot(u.x - p.center.x, u.z - p.center.z) < 7.5;
+    u.rp -= dt; if (!near && u.rp <= 0){ u.rp = 1; const res = bfs(Math.floor(u.x), Math.floor(u.z), u.gy, (x, z) => { const d = Math.hypot(x + 0.5 - p.center.x, z + 0.5 - p.center.z); return d < 6.5 && d > 4.6; }); if (res.goal != null) u.path = pathFrom(res); }
+    if (!near) follow(u, 1.6, dt);
+    else { u.path = []; u.rot = Math.atan2(cell.x + 0.5 - u.x, cell.z + 0.5 - u.z); u.hitting = true; u.phase += dt*12; u.t -= dt;
+      if (u.t <= 0){ u.t = 0.75; setB(cell.x, cell.y, cell.z, B.STONE); const k = bkey(cell.x, cell.y, cell.z); placed.add(k); foreign.add(k); cell.had = true; sndPop(); burst(TEX.sq, cell.x + 0.5, cell.y + 0.5, cell.z + 0.5, 4, 1.6, 0x9a9a9a, 0.13, 8, 0.4); } }
+    return;
+  }
+  // perseguir y empujar
+  u.state = 'seek'; u.rp -= dt; const gx = Math.floor(player.x), gz = Math.floor(player.z);
+  if (u.rp <= 0){ u.rp = 0.6; const goal = (x, z) => Math.abs(x - gx) <= 1 && Math.abs(z - gz) <= 1; let res = bfs(Math.floor(u.x), Math.floor(u.z), u.gy, goal, 1400);
+    if (res.goal == null && u.breaker) res = bfs(Math.floor(u.x), Math.floor(u.z), u.gy, goal, 1400, true);
+    if (res.goal != null) u.path = pathFrom(res); else if (!u.path.length) wanderStep(u); }
+  follow(u, 1.7, dt);
+  const dx = player.x - u.x, dz = player.z - u.z, d = Math.hypot(dx, dz);
+  if (d < 1.75 && Math.abs(player.y - u.y) < 1.6 && u.pushCd <= 0){ u.pushCd = 2.4; const k = d > 0.01 ? 1/d : 0; player.vx += dx*k*9; player.vz += dz*k*9; player.vy = Math.max(player.vy, 5.5); player.ground = false; tone('square', 220, 90, 0.16, 0.22);
+    if (!pushTold){ pushTold = true; toast('¡Los cuatreros te empujan! Maréalos o enciérralos.'); } }
+}
+/* al armar la Vaca Real: desaparecen todos los cuatreros del reino y estalla todo lo que construyeron */
+export function royalBlast(){
+  const any = cuatreros.some(u => u.w === 2) || foreign.size > 0;
+  cuatreros.slice().forEach(u => { if (u.w === 2){ burst(TEX.spark, u.x, u.y + 1, u.z, 22, 5, () => [0xffffff, 0xffd27a, 0xc8a8ff][Math.floor(Math.random()*3)], 0.3, 5, 1); removeCuatrero(u); } });
+  let n = 0; for (const k of [...foreign]){ const x = k % 64, z = Math.floor(k/64) % 64, y = Math.floor(k/4096); if (getB(x, y, z) !== 0){ setB(x, y, z, 0); if (n++ % 3 === 0) burst(TEX.sq, x + 0.5, y + 0.5, z + 0.5, 5, 5, 0x9a9a9a, 0.2, 9, 0.9); } placed.delete(k); foreign.delete(k); }
+  clearBunker(); crewT = 0; uiT = 0; if (any){ sndPoof(); sndNight(); toast('¡La Vaca Real espantó a todos los cuatreros del reino! Tu premio ahora es la Edición Real.'); }
+}
+
 /* panel de debug */
-export function advFlags(){ return { modo:GS.mode, iniciado:started, fase:phase, reloj:clock, faltan:started ? (phase === 'day' ? CFG().day : CFG().night) - clock : null, noches:nights, luz:GS.daylight, cuatreros:cuatreros.map(u => ({ estado:u.state, mareado:u.stun > 0, x:+u.x.toFixed(1), z:+u.z.toFixed(1), y:u.gy, llevaVaca:u.cow ? cowName(u.cow) : null, objetivo:u.target ? cowName(u.target) : null })), vacasRobadas:cows.filter(c => c.held).map(cowName), corrales:corrals.length, atrapados:trappedN, problemaHace:troubleT }; }
-export function advDebug(){ const f = advFlags(); let h = 'mundo: <b>' + GS.world + '</b>   modo: <b>' + f.modo + '</b>'; if (f.modo !== 'aventura') return h + '\n'; h += ' (<b>' + GS.diff + '</b>)' + (GS.inv ? '   bloques: ' + GS.inv.join(',') + '   recuperables: ' + GS.recover : '') + (truceT > 0 ? '   tregua: ' + fmtTime(truceT) : '');
+export function advFlags(){ return { modo:GS.mode, iniciado:started, fase:phase, reloj:clock, faltan:started ? (phase === 'day' ? CFG().day : CFG().night) - clock : null, noches:nights, luz:GS.daylight, cuatreros:cuatreros.map(u => ({ mundo:u.w, rol:u.role, estado:u.state, mareado:u.stun > 0, x:+u.x.toFixed(1), z:+u.z.toFixed(1), y:u.gy, llevaVaca:u.cow ? cowName(u.cow) : null, objetivo:u.target ? cowName(u.target) : null })), vacasRobadas:cows.filter(c => c.held).map(cowName), corrales:corrals.length, atrapados:trappedN, problemaHace:troubleT }; }
+export function advDebug(){ const f = advFlags(); let h = 'mundo: <b>' + GS.world + '</b>   modo: <b>' + f.modo + '</b>'; if (f.modo !== 'aventura') return h + '\n'; h += ' (<b>' + GS.diff + '</b>)' + (GS.inv ? '   bloques: ' + GS.inv.join(',') + '   recuperables: ' + GS.recover : '') + (crewT > 0 ? '   tregua: ' + fmtTime(crewT) : '') + (GS.world === 2 ? '   búnker: ' + bunkerInfo() : '');
   h += '   fase: <b>' + (f.iniciado ? f.fase : 'sin iniciar') + '</b>' + (f.faltan != null ? ' (cambia en ' + fmtTime(f.faltan) + ')' : '') + '   noches: ' + f.noches + '   (L = anochecer, J = amanecer)\n';
   h += 'cuatreros: <b>' + f.cuatreros.length + '</b>' + f.cuatreros.map(u => ' [' + u.estado + (u.mareado ? '*' : '') + (u.llevaVaca ? ' con ' + u.llevaVaca.replace('Vaca ', '') : '') + ' @' + u.x + ',' + u.z + ']').join('') + '   atrapados: ' + f.atrapados + '\n';
   h += 'vacas robadas: ' + (f.vacasRobadas.length ? '<span class="warn">' + f.vacasRobadas.join(', ') + '</span>' : '<span class="off">ninguna</span>') + '   corrales: ' + f.corrales + '   tips en: ' + (f.problemaHace > 0 ? Math.max(0, 60 - f.problemaHace).toFixed(0) + ' s' : '—') + '\n';
   return h; }
 if (DEBUG) document.addEventListener('keydown', e => { if (state !== 'play' || GS.mode !== 'aventura') return;
+  if (e.code === 'KeyT') debugSkipTruce();
   if (e.code === 'KeyL'){ if (!started && cows.length) started = true; if (started){ phase = 'day'; clock = CFG().day - 2; warned = true; } }
   if (e.code === 'KeyJ' && started && phase === 'night') clock = CFG().night - 1; });
 
@@ -373,3 +461,4 @@ late('advFlags', () => advFlags);
 late('advDebug', () => advDebug);
 late('refreshInv', () => refreshInv);
 late('setDifficulty', () => setDifficulty);
+late('royalBlast', () => royalBlast);

@@ -6,8 +6,9 @@ Juego 3D en primera persona para navegador de escritorio. Explora un pequeño mu
 - Se juega con teclado y mouse, o con controles táctiles en teléfonos y tablets.
 - Dos modos: aventura (de noche llegan cuatreros a robarte las vacas) y libre.
 - Tres dificultades en aventura: fácil, difícil (bloques contados, noches largas, oleadas crecientes y un cuatrero que rompe cercas) y legendario (además vacas de 23 bloques, sin ayudas y corrales que se alejan).
-- Secreto: bajo el punto de inicio hay una casa enterrada con una llave que abre el Reino de Piedra, donde vive la Vaca Real.
-- Modo debug: agrega `?debug=true` a la URL (panel de condiciones con F3, K completa la plataforma más cercana, L adelanta el anochecer, J el amanecer, O abre el segundo mapa, contador de fps).
+- Secreto: bajo el punto de inicio hay una casa enterrada con una llave que abre el Reino de Piedra, donde vive la Vaca Real (se desbloquea al armar las otras tres). Una casita de piedra te devuelve a la granja; cada mapa conserva sus bloques.
+- En el reino, en difícil los cuatreros que quedaban te siguen y te empujan; en legendario además una cuadrilla le construye un búnker a la plataforma de la Vaca Real.
+- Modo debug: agrega `?debug=true` a la URL (panel de condiciones con F3, K completa la plataforma más cercana, L adelanta el anochecer, J el amanecer, O cambia de mapa, T termina la tregua del reino, contador de fps).
 
 ## Desarrollo
 

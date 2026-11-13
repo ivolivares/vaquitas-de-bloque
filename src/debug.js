@@ -24,7 +24,7 @@ export function debugFlags(){
 export function updateDebug(dt){
   if (!DEBUG || !dbgOn) return; dbgAcc += dt; if (dbgAcc < 0.2) return; dbgAcc = 0;
   const f = debugFlags(), yn = (v, a = 'SÍ', b = 'no') => v ? '<span class="on">' + a + '</span>' : '<span class="off">' + b + '</span>';
-  let h = '<b>DEBUG</b> (F3 oculta · K completa la plataforma más cercana · O abre el segundo mapa)\n';
+  let h = '<b>DEBUG</b> (F3 oculta · K completa la plataforma más cercana · O cambia de mapa)\n';
   h += 'estado: <b>' + f.estado + '</b>   mouse capturado: ' + yn(f.mouseCapturado) + (f.modoSinCaptura ? '  <span class="warn">modo flechas</span>' : '') + '   t=' + fmtTime(f.tiempoJugado) + '\n';
   f.vacas.forEach(v => { h += 'Vaquita ' + v.n + ' (' + v.nombre.replace('Vaca ', '') + '): ' + yn(v.completada, 'COMPLETADA', 'pendiente') + '  celdas ' + v.celdasCorrectas + '/' + v.celdas + (v.celdasEquivocadas ? ' <span class="warn">(' + v.celdasEquivocadas + ' mal)</span>' : '')
     + '  crono: ' + (v.completada ? (v.tiempoFinal == null ? 's/d' : v.tiempoFinal >= 999 ? 'K (999)' : fmtTime(v.tiempoFinal)) : v.cronometroIniciado ? '<span class="on">' + fmtTime(v.cronometro) + '…</span>' : '<span class="off">sin iniciar</span>')

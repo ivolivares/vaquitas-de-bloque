@@ -13,7 +13,7 @@ import { evalPlatform, onEdit, plats } from './platforms.js';
 import { cows, petCow, raycaster } from './cows.js';
 
 export const HOTBAR = [B.DIRT, B.STONE, B.WOOD, B.BLACK, B.WHITE, B.RUST, B.BROWN, B.LAVENDER, B.SLATE];
-export function cowUnderAim(maxT){ raycaster.set(eyeV, dirV); raycaster.near = 0; raycaster.far = maxT; const hits = raycaster.intersectObjects(cows.map(c => c.group), true); if (!hits.length) return null; let o = hits[0].object; while (o && !o.userData.cow) o = o.parent; return o ? o.userData.cow : null; }
+export function cowUnderAim(maxT){ raycaster.set(eyeV, dirV); raycaster.near = 0; raycaster.far = maxT; const hits = raycaster.intersectObjects(cows.filter(c => c.w === GS.world).map(c => c.group), true); if (!hits.length) return null; let o = hits[0].object; while (o && !o.userData.cow) o = o.parent; return o ? o.userData.cow : null; }
 let recoverTold = false;
 export function actBreak(){
   aim(); const hit = raycastGrid(eyeV, dirV, REACH); const cow = cowUnderAim(hit.hit ? Math.min(REACH, hit.t) : REACH);   // la vaca tiene prioridad sobre los bloques
@@ -39,7 +39,7 @@ export function actPlace(){
   if (GS.inv && GS.inv[GS.slot] <= 0){ sndThud(); LATE.toast('No te queda ' + BLOCK_NAME[HOTBAR[GS.slot]].toLowerCase() + '. Rompe bloques para conseguir más.'); return; }
   setB(x, y, z, HOTBAR[GS.slot]); placed.add(bkey(x, y, z)); sndPop(); if (GS.inv){ GS.inv[GS.slot]--; LATE.refreshInv(); } onEdit(x, y, z, true);
 }
-export function debugComplete(){ let best = null, bd = 1e9; for (const p of plats){ if (p.done) continue; const d = Math.hypot(p.center.x - player.x, p.center.z - player.z); if (d < bd){ bd = d; best = p; } } if (!best) return;
+export function debugComplete(){ let best = null, bd = 1e9; for (const p of plats){ if (p.done || !p.cells.length) continue; const d = Math.hypot(p.center.x - player.x, p.center.z - player.z); if (d < bd){ bd = d; best = p; } } if (!best) return;
   best.cells.forEach(c => setB(c.x, c.y, c.z, c.mat)); evalPlatform(best, null); }
 export let hintTxt = '';
 export function updateTarget(){

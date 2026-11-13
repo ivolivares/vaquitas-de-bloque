@@ -22,7 +22,9 @@ export const VARIANTS = [
   { key:'real', name:'Vaca Real', a:B.WHITE, b:B.ROYAL, beam:0xffd76a, colA:[244,238,224], colB:[122,62,168] },   // vaca secreta del segundo mapa
 ];
 export const PLAT_POS = [];   // esquina mínima (x,z) de cada plataforma; tamaño 4 (x) × 5 (z). Se llena al generar el mundo
-const WORLDS = { 1: { plats:[[10, 12], [46, 14], [28, 46]], spawn:[32.5, 30.5], seed:0, trees:26 }, 2: { plats:[[6, 8], [52, 8], [8, 50], [30, 29]], spawn:[32.5, 43.5], seed:300, trees:14 } };
+const WORLDS = { 1: { plats:[[10, 12], [46, 14], [28, 46]], spawn:[32.5, 30.5], seed:0, trees:26 }, 2: { plats:[[30, 29]], spawn:[32.5, 43.5], seed:300, trees:16 } };   // en el segundo mapa solo está la plataforma de la Vaca Real
+/* casita de piedra del segundo mapa: adentro flota la llave para volver */
+export const RETURN = { x:32, z:47 };
 /* casa enterrada bajo el centro del primer mapa: adentro flota la llave del portal */
 export const KEYROOM = { x:32, y:2, z:30 };
 /* plantilla de 14 celdas: [dx,dy,dz, usaSecundario(faja), (grenuda), (lunar)] — la cabeza queda hacia -z */
@@ -57,7 +59,7 @@ export function generateWorld(w){
   }
   // aplanar alrededor de las plataformas y del punto de inicio
   const flats = PLAT_POS.map(([px, pz], i) => ({ x0:px-2, x1:px+5, z0:pz-2, z1:pz+6, cx:px+2, cz:pz+2, i }));
-  if (w === 2) flats.unshift({ x0:21, x1:43, z0:20, z1:46, cx:32, cz:31, i:-1 });   // patio del castillo y explanada de llegada
+  if (w === 2) flats.unshift({ x0:21, x1:43, z0:20, z1:50, cx:32, cz:31, i:-1 });   // patio del castillo y explanada de llegada
   flats.forEach(f => { const H = clamp(Math.round(raw[f.cx + f.cz*WX]), 6, 13); if (f.i >= 0) platH[f.i] = H;
     for (let z = 0; z < WZ; z++) for (let x = 0; x < WX; x++){ const dx = Math.max(f.x0 - x, 0, x - f.x1), dz = Math.max(f.z0 - z, 0, z - f.z1), d = Math.hypot(dx, dz); let w = clamp(1 - d/8, 0, 1); w = w*w*(3 - 2*w); raw[x + z*WX] += (H - raw[x + z*WX]) * w; } });
   for (let i = 0; i < raw.length; i++) hmap[i] = clamp(Math.floor(raw[i]), 2, 23);
@@ -72,6 +74,7 @@ export function generateWorld(w){
     for (let x = 23; x <= 41; x++) for (let z = 22; z <= 40; z++){ if (x !== 23 && x !== 41 && z !== 22 && z !== 40) continue;
       if (((z === 22 || z === 40) && Math.abs(x - 32) <= 1) || ((x === 23 || x === 41) && Math.abs(z - 31) <= 1)) continue;        // puertas
       col(x, z, hash2(x, z, 77) < 0.14 ? 1 : 3 + ((x + z) % 2)); }
+    { const R = RETURN, b = H(R.x, R.z); for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++){ if (dx && dz) for (let y = b; y < b + 3; y++) setBRaw(R.x + dx, y, R.z + dz, B.STONE); setBRaw(R.x + dx, b + 3, R.z + dz, (dx || dz) ? B.STONE : B.WOOD); } }   // casita del regreso: cuatro pilares y techo
     for (const [tx, tz] of [[23, 22], [41, 22], [23, 40], [41, 40]]) for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) col(tx + dx, tz + dz, 7 + ((dx + dz + 2) % 2));
   }
   if (w === 1){   // la casa de la llave: una pieza de madera de 3×3×2 enterrada bajo el punto de inicio
@@ -96,3 +99,9 @@ export function generateWorld(w){
 }
 export function isProtected(x, y, z){ if (y === 0) return true; for (let i = 0; i < PLAT_POS.length; i++){ const [px, pz] = PLAT_POS[i]; if (x >= px && x < px+4 && z >= pz && z < pz+5 && y <= platH[i]-1) return true; } return false; }
 generateWorld(1);
+
+/* cada mapa conserva sus bloques mientras visitas el otro */
+const snaps = {};
+export function saveWorld(w){ snaps[w] = { chunks: chunks.map(c => c.slice()), placed: [...placed], foreign: [...foreign] }; }
+export function loadWorld(w){ generateWorld(w); const s = snaps[w]; if (!s) return; s.chunks.forEach((c, i) => chunks[i].set(c)); s.placed.forEach(k => placed.add(k)); s.foreign.forEach(k => foreign.add(k)); }
+export function topY(x, z){ let y = WY - 1; while (y > 0 && getB(x, y - 1, z) === 0) y--; return y; }

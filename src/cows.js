@@ -94,8 +94,8 @@ export const cows = [];
 export function walkableY(x, z, fy){ const bx = Math.floor(x), bz = Math.floor(z); if (bx < 1 || bx >= WX-1 || bz < 1 || bz >= WZ-1) return null;
   for (const gy of [fy+1, fy, fy-1, fy-2]){ if (gy < 1 || getB(bx, gy-1, bz) === 0) continue; if (gy === fy+1 && placed.has(bkey(bx, gy-1, bz))) continue; let clear = true; for (let y = gy; y <= Math.max(gy, fy) + 1; y++) if (getB(bx, y, bz) !== 0){ clear = false; break; } if (clear) return gy; } return null; }
 export function spawnCow(p){
-  const model = buildCowModel(p.i), c = { vi:p.i, p, group:model.g, legs:model.legs, head:model.head, tail:model.tail, x:p.center.x, z:p.center.z, y:p.H, gy:p.H, rot:Math.PI, state:'idle', t:1.5 + Math.random()*2, tx:0, tz:0, phase:Math.random()*6, bounce:0, tilt:0 };
-  model.g.userData.cow = c; model.g.position.set(c.x, c.y, c.z); model.g.rotation.y = c.rot; scene.add(model.g); cows.push(c); return c;
+  const model = buildCowModel(p.i), c = { vi:p.i, p, group:model.g, legs:model.legs, head:model.head, tail:model.tail, x:p.center.x, z:p.center.z, y:p.H, gy:p.H, rot:Math.PI, state:'idle', t:1.5 + Math.random()*2, tx:0, tz:0, phase:Math.random()*6, bounce:0, tilt:0, w:p.i === 3 ? 2 : 1 };
+  model.g.visible = c.w === GS.world; model.g.userData.cow = c; model.g.position.set(c.x, c.y, c.z); model.g.rotation.y = c.rot; scene.add(model.g); cows.push(c); return c;
 }
 export function updateCow(c, dt){
   // robada: la mueve el cuatrero o espera triste en su corral

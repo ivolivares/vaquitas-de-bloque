@@ -51,7 +51,7 @@ export function frame(now){
   updateDebug(dt);
   if (state === 'prize'){ orbit.update(); renderer.render(prizeScene, prizeCam); return; }
   if (state === 'play'){
-    GS.playTime += dt; updatePlayer(dt); for (const c of cows) updateCow(c, dt); for (const p of plats) if (p.anim) updatePlatAnim(p, dt); updateParticles(dt); updateAdventure(dt); updatePortal(dt); collideCharacters(); updateTarget();
+    GS.playTime += dt; updatePlayer(dt); for (const c of cows) if (c.w === GS.world) updateCow(c, dt); for (const p of plats) if (p.anim) updatePlatAnim(p, dt); updateParticles(dt); updateAdventure(dt); updatePortal(dt); collideCharacters(); updateTarget();
     if (GS.winAt != null && GS.playTime >= GS.winAt){ GS.winAt = null; showWin(); }
     if (DEBUG){ fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5){ $('fps').textContent = Math.round(fpsN/fpsAcc) + ' fps'; fpsAcc = 0; fpsN = 0; } }
   }
