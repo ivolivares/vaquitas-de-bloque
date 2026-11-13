@@ -44,4 +44,5 @@ $('btnBagClose').onclick = closeBag;
 document.addEventListener('keydown', e => { if (e.repeat) return; if (e.code === 'KeyE' && state === 'play') openBag(); else if ((e.code === 'KeyE' || e.code === 'Escape') && state === 'bag') closeBag(); });
 
 late('discover', () => discover);
+late('hasBlock', () => has);
 late('applyHotbar', () => applyHotbar);

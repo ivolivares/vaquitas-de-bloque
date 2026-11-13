@@ -1,7 +1,7 @@
 /* ACCIONES DEL JUGADOR: romper, poner, acariciar */
 import { bkey, foreign, placed } from './world.js';
 import * as THREE from 'three';
-import { GS, LATE } from './state.js';
+import { GS, LATE, late } from './state.js';
 import { $ } from './util.js';
 import { B, BLOCK_NAME } from './blocks.js';
 import { BLOCK_TILES, tileAvg } from './atlas.js';
@@ -41,11 +41,12 @@ export function actPlace(){
 }
 export function debugComplete(){ let best = null, bd = 1e9; for (const p of plats){ if (p.done || !p.cells.length) continue; const d = Math.hypot(p.center.x - player.x, p.center.z - player.z); if (d < bd){ bd = d; best = p; } } if (!best) return;
   best.cells.forEach(c => setB(c.x, c.y, c.z, c.mat)); evalPlatform(best, null); }
+late('HOTBAR', () => HOTBAR);
 export let hintTxt = '';
 export function updateTarget(){
   aim(); const hit = raycastGrid(eyeV, dirV, REACH); let h = '';
   if (hit.ghost && GS.noAids){ outline.visible = true; outline.position.set(hit.ghost.x + 0.5, hit.ghost.y + 0.5, hit.ghost.z + 0.5); }
-  else if (hit.ghost){ outline.visible = true; outline.position.set(hit.ghost.x + 0.5, hit.ghost.y + 0.5, hit.ghost.z + 0.5); const need = hit.ghost.cell.mat, key = HOTBAR.indexOf(need) + 1; h = HOTBAR[GS.slot] === need ? (GS.touch ? '¡Ese es! Toca Poner' : '¡Ese es! Click derecho para ponerlo') : 'Aquí va: ' + BLOCK_NAME[need] + (GS.touch ? ' (tócalo abajo)' : ' (tecla ' + key + ')'); }
+  else if (hit.ghost){ outline.visible = true; outline.position.set(hit.ghost.x + 0.5, hit.ghost.y + 0.5, hit.ghost.z + 0.5); const need = hit.ghost.cell.mat, key = HOTBAR.indexOf(need) + 1; h = HOTBAR[GS.slot] === need ? (GS.touch ? '¡Ese es! Toca Poner' : '¡Ese es! Click derecho para ponerlo') : 'Aquí va: ' + BLOCK_NAME[need] + (!key ? (LATE.hasBlock && LATE.hasBlock(need) ? ' (sácalo de tu mochila)' : ' (aún no lo descubres: búscalo y pícalo)') : GS.touch ? ' (tócalo abajo)' : ' (tecla ' + key + ')'); }
   else if (hit.hit){ outline.visible = true; outline.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5); const c = cellMap.get(cellKey(hit.x, hit.y, hit.z)); if (c && c.state === 2) h = GS.touch ? 'Ese no es. Rómpelo con Romper' : 'Ese no es. Rómpelo con click izquierdo'; }
   else outline.visible = false;
   if (h !== hintTxt){ hintTxt = h; $('hint').textContent = h; $('hint').classList.toggle('hidden', !h); }

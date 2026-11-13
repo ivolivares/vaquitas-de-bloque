@@ -32,12 +32,12 @@ function makePlat(i){
 }
 /* ubica la plataforma, su cartel y su haz de luz. Las tres vacas base viven en el primer mapa; la Vaca Real, en el segundo */
 function placePlat(p){
-  const [px, pz] = PLAT_POS[p.i === 3 ? 0 : p.i]; p.x = px; p.z = pz; p.H = platH[p.i === 3 ? 0 : p.i]; p.center.set(px + 2, p.H, pz + 2.5);
+  const k = p.i === 3 ? 0 : p.i > 3 ? p.i - 1 : p.i, [px, pz] = PLAT_POS[k]; p.x = px; p.z = pz; p.H = platH[k]; p.center.set(px + 2, p.H, pz + 2.5);
   const sx = px + 2, sz = pz + 5.7, sy = hmap[Math.floor(sx) + Math.floor(sz)*WX];
   p.placed = true; p.post.position.set(sx, sy + 0.95, sz); p.s1.position.set(sx, sy + 1.75, sz + 0.09); p.s2.position.set(sx, sy + 1.75, sz - 0.09); p.beam.position.set(sx, sy + 2.2 + 35, sz); p.core.position.copy(p.beam.position);
 }
 function clearCells(p){ p.cells.forEach(c => { cellMap.delete(cellKey(c.x, c.y, c.z)); p.group.remove(c.ghost); p.group.remove(c.over); }); p.cells.length = 0; p.kind = null; }
-export const plats = PLAT_POS.map((_, i) => { const p = makePlat(i); p.here = true; placePlat(p); return p; });
+export const plats = [0, 1, 2].map(i => { const p = makePlat(i); p.here = true; placePlat(p); return p; });
 /* la Vaca Real se desbloquea cuando ya armaste las otras tres */
 export function refreshLock(){ const p = plats[3]; if (!p || p.done) return; const locked = !plats.slice(0, 3).every(q => q.done); if (locked === p.locked) return;
   p.locked = locked; p.signMat.map.dispose(); p.signMat.map = signTexture(p.V.name, false, locked); p.beamMat.opacity = locked ? 0.14 : 0.42; clearCells(p); }
@@ -48,10 +48,15 @@ export function relocatePlats(){
   if (GS.world === 2) ensureRoyal();
   for (const p of plats){
     if (p.anim){ p.anim.cubes.forEach(m => scene.remove(m)); p.anim = null; LATE.spawnCow(p); }   // una vaca a medio aparecer no se pierde
-    p.here = (p.i === 3) === (GS.world === 2); clearCells(p); if (p.here) placePlat(p);
+    p.here = hereOf(p); if (p.here) p.seen = true; clearCells(p); if (p.here) placePlat(p);
     for (const o of [p.group, p.post, p.s1, p.s2, p.beam, p.core]) o.visible = p.here; }
   refreshLock();
 }
+const hereOf = p => p.i === 3 ? GS.world === 2 : p.rare ? GS.world === 1 && GS.mode === 'libre' : GS.world === 1;
+/* las vacas raras (y sus plataformas) solo existen en modo libre */
+export function syncRare(){ const libre = GS.mode === 'libre';
+  for (const p of plats){ if (!p.rare) continue; const h = hereOf(p); if (h !== p.here){ p.here = h; if (!h) clearCells(p); for (const o of [p.group, p.post, p.s1, p.s2, p.beam, p.core]) o.visible = h; } }
+  for (const c of LATE.cows) if (c.p.rare){ c.w = libre ? 1 : 0; c.group.visible = c.w === GS.world; } if (LATE.updateCounter) LATE.updateCounter(); }
 /* plantillas: la base de 14 celdas y la grande de 23 (legendario), que suma lomo, cuernos de madera y cola */
 function templateCells(kind, i, V){
   if (kind !== 'big') return TEMPLATE.map(tc => [tc[0], tc[1], tc[2], tc[3 + i] ? V.b : V.a]);
@@ -97,6 +102,9 @@ export function updatePlatAnim(p, dt){
     if (p.i === 3 && LATE.royalBlast) LATE.royalBlast(); LATE.tryWin(); }
 }
 export function onEdit(x, y, z, placed){ for (const p of plats){ if (p.done) continue; const c = cellMap.get(cellKey(x, y, z)); const mine = c && c.p === p; if (mine && placed && p.startT == null) p.startT = GS.playTime; evalPlatform(p, mine && placed ? c : null); } }
+
+ensureRoyal();
+for (const i of [4, 5, 6]){ const p = makePlat(i); p.rare = true; p.here = false; placePlat(p); for (const o of [p.group, p.post, p.s1, p.s2, p.beam, p.core]) o.visible = false; plats.push(p); }
 
 /* enlaces tardíos */
 late('plats', () => plats);

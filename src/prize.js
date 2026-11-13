@@ -17,6 +17,9 @@ export const EDITIONS = {
   grenuda: { label:'Edición Greñuda', base:[200,108,46], alt:[240,194,114], stitch:[122,58,22], sheen:[255,200,150] },
   lunar:   { label:'Edición Lunar', base:[190,168,228], alt:[108,116,146], stitch:[128,104,178], sheen:[230,220,255] },
   real:    { label:'Edición Real', base:[246,238,220], alt:[122,62,168], stitch:[196,170,120], sheen:[255,246,225] },
+  heno:    { label:'Edición Heno', base:[232,194,84], alt:[236,216,160], stitch:[150,104,40], sheen:[255,236,170] },
+  zapallo: { label:'Edición Zapallo', base:[232,136,36], alt:[78,134,52], stitch:[150,76,18], sheen:[255,196,130] },
+  cuarzo:  { label:'Edición Cuarzo', base:[222,206,244], alt:[166,142,116], stitch:[140,120,180], sheen:[250,244,255] },
   clasico: { label:'Edición Clásica', base:[250,236,206], alt:[232,178,58], stitch:[200,160,96], sheen:[255,246,220] },
 };
 export const GOLD = [234,180,58];

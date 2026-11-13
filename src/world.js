@@ -20,9 +20,13 @@ export const VARIANTS = [
   { key:'grenuda', name:'Vaca Greñuda', a:B.RUST, b:B.BROWN, beam:0xffa040, colA:[196,104,38], colB:[80,50,32] },
   { key:'lunar', name:'Vaca Lunar', a:B.LAVENDER, b:B.SLATE, beam:0xc8a8ff, colA:[188,166,228], colB:[96,104,128] },
   { key:'real', name:'Vaca Real', a:B.WHITE, b:B.ROYAL, beam:0xffd76a, colA:[244,238,224], colB:[122,62,168] },   // vaca secreta del segundo mapa
+  /* vacas raras del modo libre: se arman con bloques descubiertos */
+  { key:'heno', name:'Vaca Heno', a:B.HAY, b:B.SAND, beam:0xffe070, colA:[226,186,72], colB:[232,210,152] },
+  { key:'zapallo', name:'Vaca Zapallo', a:B.PUMPKIN, b:B.LEAVES, beam:0xff9a3a, colA:[230,134,34], colB:[70,128,48] },
+  { key:'cuarzo', name:'Vaca Cuarzo', a:B.QUARTZ, b:B.BRICK, beam:0xe0c8ff, colA:[214,196,240], colB:[166,142,116] },
 ];
 export const PLAT_POS = [];   // esquina mínima (x,z) de cada plataforma; tamaño 4 (x) × 5 (z). Se llena al generar el mundo
-const WORLDS = { 1: { plats:[[10, 12], [46, 14], [28, 46]], spawn:[32.5, 30.5], seed:0, trees:26 }, 2: { plats:[[30, 29]], spawn:[32.5, 43.5], seed:300, trees:16 } };   // en el segundo mapa solo está la plataforma de la Vaca Real
+const WORLDS = { 1: { plats:[[10, 12], [46, 14], [28, 46], [50, 44], [7, 38], [28, 5]], spawn:[32.5, 30.5], seed:0, trees:26 }, 2: { plats:[[30, 29]], spawn:[32.5, 43.5], seed:300, trees:16 } };   // en el segundo mapa solo está la plataforma de la Vaca Real
 /* casita de piedra del segundo mapa: adentro flota la llave para volver */
 export const RETURN = { x:32, z:47 };
 /* casa enterrada bajo el centro del primer mapa: adentro flota la llave del portal */
@@ -33,7 +37,7 @@ export const TEMPLATE = [
   [1,1,1, 0,0,1],[2,1,1, 0,0,0],[1,1,2, 1,0,0],[2,1,2, 1,0,0],[1,1,3, 0,0,0],[2,1,3, 0,0,1], // cuerpo
   [1,1,0, 0,0,0],[2,1,0, 0,0,0],[1,2,0, 0,0,1],[2,2,0, 0,0,0],                     // cabeza
 ];
-TEMPLATE.forEach((t, k) => t.push(k >= 4 && k <= 9 ? 1 : 0));   // Vaca Real: cuerpo con el manto
+TEMPLATE.forEach((t, k) => t.push(k >= 4 && k <= 9 ? 1 : 0, k < 4 ? 1 : 0, k >= 12 ? 1 : 0, k >= 4 && k <= 9 ? 1 : 0));   // Real: cuerpo con el manto · Heno: patas de arena · Zapallo: copete de hojas · Cuarzo: cuerpo de ladrillo
 export const SPAWN = { x:32.5, z:30.5 };
 
 /* bloques puestos por el jugador o por un cuatrero: ni vacas ni cuatreros pueden subirse a ellos */
