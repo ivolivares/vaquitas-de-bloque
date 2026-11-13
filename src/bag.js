@@ -10,9 +10,10 @@ import { HOTBAR } from './actions.js';
 import { lock, selectSlot, setState, state, syncHotbar, toast } from './ui.js';
 
 const BASE = [B.DIRT, B.STONE, B.WOOD];
-export const BAG = [B.DIRT, B.STONE, B.WOOD, B.GRASS, B.LOG, B.LEAVES, B.FLOWERS, B.SAND, B.HAY, B.PUMPKIN, B.QUARTZ, B.BRICK];
+export const BAG = [B.DIRT, B.STONE, B.WOOD, B.GRASS, B.LOG, B.LEAVES, B.FLOWERS, B.SAND, B.HAY, B.PUMPKIN, B.QUARTZ, B.BRICK, B.TILE, B.LAMP, B.GOLD];
 const CLUE = { [B.GRASS]:'Pica pasto', [B.LOG]:'Pica el tronco de un árbol', [B.LEAVES]:'Pica las hojas de un árbol', [B.FLOWERS]:'Busca flores en la pradera', [B.SAND]:'Busca arena en las zonas bajas',
-  [B.HAY]:'Busca un fardo amarillo', [B.PUMPKIN]:'Busca algo naranja en el pasto', [B.QUARTZ]:'Brilla dentro de la piedra', [B.BRICK]:'Está en otro reino…' };
+  [B.HAY]:'Busca un fardo amarillo', [B.PUMPKIN]:'Busca algo naranja en el pasto', [B.QUARTZ]:'Brilla dentro de la piedra', [B.BRICK]:'Está en otro reino…', [B.TILE]:'Premio del encargo: Espantapájaros', [B.LAMP]:'Premio del encargo: Pozo', [B.GOLD]:'Premio del encargo: Establo' };
+const MINED = id => id < B.TILE;
 const free = () => GS.mode === 'libre';
 export const has = id => BASE.includes(id) || GS.unlocked.includes(id);
 let target = 0;
@@ -25,7 +26,9 @@ export function applyHotbar(){
   const royal = HOTBAR.includes(B.ROYAL); HOTBAR.length = 9; if (GS.mode === 'aventura' && GS.diff === 'facil') HOTBAR.push(B.HAY); if (royal) HOTBAR.push(B.ROYAL);   // en fácil llevas heno para guiar y entretener a las vacas
   document.body.dataset.mode = GS.mode; syncHotbar(); selectSlot(GS.slot); }
 /* se llama al romper un bloque */
-export function discover(id){ if (!free() || !BAG.includes(id) || has(id)) return;
+/* premio de un encargo */
+export function unlock(id){ if (has(id)) return; GS.unlocked.push(id); writeSave(); $('bagBtn').classList.add('new'); }
+export function discover(id){ if (!free() || !BAG.includes(id) || !MINED(id) || has(id)) return;
   GS.unlocked.push(id); writeSave(); track('bloque_descubierto', { bloque: BLOCK_NAME[id], total: GS.unlocked.length });
   toast('¡Descubriste ' + BLOCK_NAME[id].toLowerCase() + '! ' + (GS.touch ? 'Toca la mochila para usarlo.' : 'Abre tu mochila con E para usarlo.')); $('bagBtn').classList.add('new'); }
 function render(){
@@ -46,4 +49,5 @@ document.addEventListener('keydown', e => { if (e.repeat) return; if (e.code ===
 
 late('discover', () => discover);
 late('hasBlock', () => has);
+late('unlockBlock', () => unlock);
 late('applyHotbar', () => applyHotbar);

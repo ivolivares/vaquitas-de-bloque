@@ -25,6 +25,8 @@ import './share.js';
 import './records.js';
 import './bag.js';
 import './photo.js';
+import './jobs.js';
+import './dog.js';
 import { setWorld, updatePortal } from './portal.js';
 import { DEBUG, GS } from './state.js';
 import { $ } from './util.js';
@@ -44,7 +46,7 @@ setTemplate('base');
 (function restore(){ const s = loadSave();
   if (s && s.world === 2) setWorld(2, false);
   if (s && s.cows[3]) ensureRoyal();   // la Vaca Real se conserva aunque hayas guardado estando en la granja
-  if (s){ GS.crown = !!s.crown; if (Array.isArray(s.unlocked)) GS.unlocked = s.unlocked; if (Array.isArray(s.hot)) GS.hot = s.hot; plats.forEach((p, i) => { p.flower = !!(s.fl && s.fl[i]); if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.slice(0, 3).every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; if (['facil', 'dificil', 'legendario'].includes(s.diff)) GS.diff = s.diff; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
+  if (s){ GS.crown = !!s.crown; if (Array.isArray(s.unlocked)) GS.unlocked = s.unlocked; if (Array.isArray(s.hot)) GS.hot = s.hot; if (Array.isArray(s.jobs)) GS.jobs = s.jobs; plats.forEach((p, i) => { p.flower = !!(s.fl && s.fl[i]); if (s.cows[i]){ p.time = (s.times && typeof s.times[i] === 'number') ? s.times[i] : null; markDone(p); spawnCow(p); } }); GS.prizeUnlocked = !!s.prize || plats.slice(0, 3).every(p => p.done); GS.muted = !!s.mute; if (s.mode === 'libre' || s.mode === 'aventura') GS.mode = s.mode; if (['facil', 'dificil', 'legendario'].includes(s.diff)) GS.diff = s.diff; GS.musicOn = s.music !== false; GS.totalTime = typeof s.total === 'number' ? s.total : null; if (typeof s.t === 'number') GS.playTime = s.t; }
   plats.forEach(p => evalPlatform(p, null)); GS.saveReady = true; updateCounter(); setMuted(GS.muted); adv.applyDifficulty(); refreshMusicUI(); setState('start'); })();
 syncCamera();
 export let last = performance.now(), fpsAcc = 0, fpsN = 0;
@@ -65,4 +67,4 @@ export function frame(now){
 }
 requestAnimationFrame(frame);
 
-if (DEBUG) window.__vq = { GS, adv, placed, bkey, setWorld, HOTBAR, musicInfo, shareInfo: LATE.shareInfo, flags: debugFlags, player, plats, cows, keys, getB, setB, actBreak, actPlace, debugComplete, enterPrize, selectSlot, raycastGrid, aim, eyeV, dirV, hmap, isProtected, buildPlush, renderer, chunkMesh, get state(){ return state; }, get playTime(){ return GS.playTime; }, get prizeUnlocked(){ return GS.prizeUnlocked; } };
+if (DEBUG) window.__vq = { jobs: LATE.jobs, dog: LATE.dog, GS, adv, placed, bkey, setWorld, HOTBAR, musicInfo, shareInfo: LATE.shareInfo, flags: debugFlags, player, plats, cows, keys, getB, setB, actBreak, actPlace, debugComplete, enterPrize, selectSlot, raycastGrid, aim, eyeV, dirV, hmap, isProtected, buildPlush, renderer, chunkMesh, get state(){ return state; }, get playTime(){ return GS.playTime; }, get prizeUnlocked(){ return GS.prizeUnlocked; } };

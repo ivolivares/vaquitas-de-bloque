@@ -125,7 +125,7 @@ body[data-touch="1"] #bagBtn kbd{ display:none; }
 #bag .panel{ max-width:640px; }
 .bagHelp{ font-size:14px; margin:2px 0 8px; }
 #bagSlots{ display:flex; justify-content:center; gap:8px; margin-bottom:10px; }
-#bagGrid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:10px; }
+#bagGrid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:10px; }
 .bslot, .bitem{ margin:0; padding:6px 4px; display:flex; flex-direction:column; align-items:center; gap:2px; background:#d9c49a; color:var(--cafe); border:3px solid #7a5530; border-radius:4px; box-shadow:none; font-size:13px; min-width:0; }
 .bslot{ flex-direction:row; gap:8px; padding:4px 10px; }
 .bslot canvas, .bitem canvas{ width:40px; height:40px; image-rendering:pixelated; border:2px solid rgba(40,20,5,.55); }
@@ -133,5 +133,5 @@ body[data-touch="1"] #bagBtn kbd{ display:none; }
 .bslot.sel, .bitem.cur{ border-color:#fff; background:#ffe9a8; box-shadow:0 0 0 3px var(--naranja); }
 .bitem small{ font-size:10px; font-weight:normal; line-height:1.15; min-height:0; }
 .bitem.locked{ opacity:1; background:#b9ab8e; cursor:default; } .bitem.locked canvas{ filter:brightness(0) opacity(.45); }
-@media (max-height:520px){ #bagBtn{ top:64px; font-size:18px; } .bagHelp{ display:none; } #bagGrid{ grid-template-columns:repeat(6, 1fr); gap:5px; } .bslot canvas, .bitem canvas{ width:26px; height:26px; } .bitem small{ display:none; } .bitem.locked small{ display:block; } }
+@media (max-height:520px){ #bagBtn{ top:64px; font-size:18px; } .bagHelp{ display:none; } #bagGrid{ grid-template-columns:repeat(8, 1fr); gap:4px; } .bslot canvas, .bitem canvas{ width:26px; height:26px; } .bitem small{ display:none; } .bitem.locked small{ display:block; } }
 body[data-touch="1"] #bagBtn{ min-width:48px; min-height:46px; font-size:22px; }

@@ -19,7 +19,7 @@ export const animMat = new THREE.MeshBasicMaterial({ map:atlasTex });
 export const overGeo = new THREE.BoxGeometry(1.05, 1.05, 1.05);
 export function signTexture(name, done, locked){ const c = mkCanvas(256, 96), g = c.getContext('2d'); g.fillStyle = '#6b4222'; g.fillRect(0, 0, 256, 96); g.fillStyle = done ? '#cfeeb0' : locked ? '#cfc8bc' : '#f3dca6'; g.fillRect(8, 8, 240, 80);
   g.fillStyle = '#b98f52'; for (let i = 0; i < 40; i++) g.fillRect(8 + Math.floor(hash2(i, 1, 3)*232), 8 + Math.floor(hash2(i, 2, 3)*78), 8, 2);
-  g.fillStyle = '#4a2a10'; g.font = 'bold 34px "Trebuchet MS",Verdana,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText((done ? '✔ ' : locked ? '🔒 ' : '') + name, 128, 50);
+  g.fillStyle = '#4a2a10'; g.font = 'bold ' + (name.length > 12 ? 25 : 34) + 'px "Trebuchet MS",Verdana,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText((done ? '✔ ' : locked ? '🔒 ' : '') + name, 128, 50);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
 function makePlat(i){
   const V = VARIANTS[i], p = { i, V, x:0, z:0, H:0, done:false, time:null, startT:null, cells:[], anim:null, kind:null, group:new THREE.Group(), center:new THREE.Vector3() };
@@ -50,13 +50,13 @@ export function relocatePlats(){
     if (p.anim){ p.anim.cubes.forEach(m => scene.remove(m)); p.anim = null; LATE.spawnCow(p); }   // una vaca a medio aparecer no se pierde
     p.here = hereOf(p); if (p.here) p.seen = true; clearCells(p); if (p.here) placePlat(p);
     for (const o of [p.group, p.post, p.s1, p.s2, p.beam, p.core]) o.visible = p.here; }
-  refreshLock();
+  refreshLock(); if (LATE.syncJobs) LATE.syncJobs();
 }
 const hereOf = p => p.i === 3 ? GS.world === 2 : p.rare ? GS.world === 1 && GS.mode === 'libre' : GS.world === 1;
 /* las vacas raras (y sus plataformas) solo existen en modo libre */
 export function syncRare(){ const libre = GS.mode === 'libre';
   for (const p of plats){ if (!p.rare) continue; const h = hereOf(p); if (h !== p.here){ p.here = h; if (!h) clearCells(p); for (const o of [p.group, p.post, p.s1, p.s2, p.beam, p.core]) o.visible = h; } }
-  for (const c of LATE.cows) if (c.p.rare){ c.w = libre ? 1 : 0; c.group.visible = c.w === GS.world; } if (LATE.updateCounter) LATE.updateCounter(); }
+  for (const c of LATE.cows) if (c.p.rare){ c.w = libre ? 1 : 0; c.group.visible = c.w === GS.world; } if (LATE.updateCounter) LATE.updateCounter(); if (LATE.syncJobs) LATE.syncJobs(); }
 /* plantillas: la base de 14 celdas y la grande de 23 (legendario), que suma lomo, cuernos de madera y cola */
 function templateCells(kind, i, V){
   if (kind !== 'big') return TEMPLATE.map(tc => [tc[0], tc[1], tc[2], tc[3 + i] ? V.b : V.a]);
@@ -101,7 +101,7 @@ export function updatePlatAnim(p, dt){
     LATE.toast(p.i === 3 ? '¡Armaste la Vaca Real! Tu premio ahora es la Edición Real.' : '¡' + p.V.name + ' lista en ' + fmtTime(p.time) + '!');
     if (p.i === 3 && LATE.royalBlast) LATE.royalBlast(); LATE.tryWin(); }
 }
-export function onEdit(x, y, z, placed){ for (const p of plats){ if (p.done) continue; const c = cellMap.get(cellKey(x, y, z)); const mine = c && c.p === p; if (mine && placed && p.startT == null) p.startT = GS.playTime; evalPlatform(p, mine && placed ? c : null); } }
+export function onEdit(x, y, z, placed){ if (LATE.jobEdit) LATE.jobEdit(x, y, z, placed); for (const p of plats){ if (p.done) continue; const c = cellMap.get(cellKey(x, y, z)); const mine = c && c.p === p; if (mine && placed && p.startT == null) p.startT = GS.playTime; evalPlatform(p, mine && placed ? c : null); } }
 
 ensureRoyal();
 for (const i of [4, 5, 6]){ const p = makePlat(i); p.rare = true; p.here = false; placePlat(p); for (const o of [p.group, p.post, p.s1, p.s2, p.beam, p.core]) o.visible = false; plats.push(p); }

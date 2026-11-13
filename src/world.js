@@ -26,7 +26,7 @@ export const VARIANTS = [
   { key:'cuarzo', name:'Vaca Cuarzo', a:B.QUARTZ, b:B.BRICK, beam:0xe0c8ff, colA:[214,196,240], colB:[166,142,116] },
 ];
 export const PLAT_POS = [];   // esquina mínima (x,z) de cada plataforma; tamaño 4 (x) × 5 (z). Se llena al generar el mundo
-const WORLDS = { 1: { plats:[[10, 12], [46, 14], [28, 46], [50, 44], [7, 38], [28, 5]], spawn:[32.5, 30.5], seed:0, trees:26 }, 2: { plats:[[30, 29]], spawn:[32.5, 43.5], seed:300, trees:16 } };   // en el segundo mapa solo está la plataforma de la Vaca Real
+const WORLDS = { 1: { plats:[[10, 12], [46, 14], [28, 46], [50, 44], [7, 38], [28, 5], [18, 26], [44, 30], [16, 52]], spawn:[32.5, 30.5], seed:0, trees:26 }, 2: { plats:[[30, 29]], spawn:[32.5, 43.5], seed:300, trees:16 } };   // en el segundo mapa solo está la plataforma de la Vaca Real
 /* casita de piedra del segundo mapa: adentro flota la llave para volver */
 export const RETURN = { x:32, z:47 };
 /* casa enterrada bajo el centro del primer mapa: adentro flota la llave del portal */

@@ -19,8 +19,8 @@ const WARN = 30;
 /* dificultades del modo aventura */
 export const DIFFS = {
   facil:      { label:'fácil',      day:95, night:65, perNight:(n, free) => Math.min(free, 2), maxActive:3, stun:4, stunCd:0, limited:false, breakers:false, big:false, aids:true,  moveCorral:false },
-  dificil:    { label:'difícil',    day:70, night:90, perNight:(n, free) => free ? Math.min(n, 4) : 0, maxActive:6, stun:2, stunCd:6, limited:true, breakers:true, big:false, aids:true,  moveCorral:false, recover:30 },
-  legendario: { label:'legendario', day:60, night:95, perNight:(n, free) => free ? Math.min(n + 1, 5) : 0, maxActive:7, stun:2, stunCd:7, limited:true, breakers:true, big:true,  aids:false, moveCorral:true, recover:20, dig:true, earnFur:true },
+  dificil:    { label:'difícil',    day:70, night:90, perNight:(n, free) => free ? Math.min(n, 4) : 0, maxActive:6, stun:2, stunCd:6, limited:true, breakers:true, big:false, aids:true,  moveCorral:false, recover:30, eclipse:{ n:2, when:(nights, t) => nights === 0 } },
+  legendario: { label:'legendario', day:60, night:95, perNight:(n, free) => free ? Math.min(n + 1, 5) : 0, maxActive:7, stun:2, stunCd:7, limited:true, breakers:true, big:true,  aids:false, moveCorral:true, recover:20, dig:true, earnFur:true, eclipse:{ n:3, when:(nights, t) => t < 300 } },
 };
 const CFG = () => (GS.mode === 'aventura' && DIFFS[GS.diff]) || DIFFS.facil;
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -65,13 +65,13 @@ function sndPoof(){ tone('sine', 300, 60, 0.35, 0.3); tone('triangle', 800, 1600
 const CU_COLORS = [[216, 64, 44], [47, 127, 216], [56, 168, 74], [154, 79, 208], [240, 154, 36]];
 const flat = c => new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(c[0]/255, c[1]/255, c[2]/255, THREE.SRGBColorSpace) });
 function box(parent, w, h, d, mat, x, y, z){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); parent.add(m); return m; }
-function buildCuatrero(ci, breaker){
-  const col = breaker ? [44, 42, 52] : CU_COLORS[ci % CU_COLORS.length], dark = col.map(v => v*0.62), skin = [226, 172, 128], g = new THREE.Group();
+function buildCuatrero(ci, breaker, eclipse){
+  const col = eclipse ? (breaker ? [58, 30, 96] : [154, 84, 214]) : breaker ? [44, 42, 52] : CU_COLORS[ci % CU_COLORS.length], dark = col.map(v => v*0.62), skin = [226, 172, 128], g = new THREE.Group();
   const poncho = new THREE.MeshLambertMaterial({ map: pxTex(12, 10, (x, y) => { if (y === 2 || y === 7) return [246, 236, 210]; if (y === 3 || y === 6) return dark; const k = 0.9 + hash2(x, y, 301)*0.16; return [col[0]*k, col[1]*k, col[2]*k]; }) });
   const face = new THREE.MeshLambertMaterial({ map: pxTex(8, 8, (x, y) => { if (y >= 5) return (y === 5 && x % 2) ? dark : col;        // pañuelo
     if (y === 2 && (x === 1 || x === 2 || x === 5 || x === 6)) return [52, 34, 24];                                                  // cejas
     if (y === 3 && (x === 1 || x === 6)) return [255, 255, 255]; if (y === 3 && (x === 2 || x === 5)) return [30, 20, 20]; return skin; }) });
-  const skinM = flat(skin), hatM = flat([64, 44, 30]), pantsM = flat([54, 62, 96]), bootM = flat([40, 28, 22]), bandM = flat(col);
+  const skinM = flat(skin), hatM = flat(eclipse ? [40, 28, 60] : [64, 44, 30]), pantsM = flat([54, 62, 96]), bootM = flat([40, 28, 22]), bandM = flat(col);
   const legs = [1, -1].map(s => { const l = new THREE.Group(); l.position.set(s*0.14, 0.64, 0); box(l, 0.22, 0.52, 0.24, pantsM, 0, -0.26, 0); box(l, 0.24, 0.14, 0.3, bootM, 0, -0.57, 0.02); g.add(l); return l; });
   box(g, 0.62, 0.62, 0.38, poncho, 0, 0.95, 0);
   const arms = [1, -1].map(s => { const a = new THREE.Group(); a.position.set(s*0.4, 1.22, 0); box(a, 0.17, 0.46, 0.2, poncho, 0, -0.23, 0); box(a, 0.15, 0.12, 0.17, skinM, 0, -0.52, 0); g.add(a); return a; });
@@ -103,7 +103,8 @@ const freeCows = () => cows.filter(c => !c.held && c.w === 1);
 const awake = () => phase === 'night' || GS.world === 2;   // en el Reino de Piedra no duermen
 const here = () => cuatreros.filter(u => u.w === GS.world);
 
-function spawnCuatrero(cow, breaker){
+function spawnCuatrero(cow, breaker){ const s = pickSpot(cow); return s ? makeCuatrero(s[0], s[1], s[2], breaker) : null; }
+function pickSpot(cow){
   const far = (x, z) => Math.hypot(x - player.x, z - player.z) > 9;
   const res = bfs(Math.floor(cow.x), Math.floor(cow.z), cow.gy, null, 2600); let cand = res.q.filter(([x, z]) => { const d = res.dist.get(x + z*64); return d >= 13 && d <= 24 && far(x, z); });
   if (!cand.length && res.q.length >= 150) cand = res.q.slice(Math.floor(res.q.length*0.6)).filter(([x, z]) => far(x, z));
@@ -111,10 +112,10 @@ function spawnCuatrero(cow, breaker){
     for (let i = 0; i < 400 && cand.length < 12; i++){ const x = 3 + Math.floor(Math.random()*58), z = 3 + Math.floor(Math.random()*58), d = Math.hypot(x - cow.x, z - cow.z), h = hmap[x + z*64];
       if (d >= 13 && d <= 26 && far(x, z) && !nearPlatform(x, z, 2) && stepY(x, z, h) === h && !res.gyOf.has(x + z*64)){ res.gyOf.set(x + z*64, h); cand.push([x, z]); } } }
   if (!cand.length) return null;
-  const [x, z] = cand[Math.floor(Math.random()*cand.length)]; return makeCuatrero(x, z, res.gyOf.get(x + z*64), breaker);
+  const [x, z] = cand[Math.floor(Math.random()*cand.length)]; return [x, z, res.gyOf.get(x + z*64)];
 }
-function makeCuatrero(x, z, gy, breaker){
-  const m = buildCuatrero(nights + cuatreros.length, breaker);
+function makeCuatrero(x, z, gy, breaker, eclipse){
+  const m = buildCuatrero(nights + cuatreros.length, breaker, eclipse);
   const u = { w:GS.world, role:null, pushCd:0, g:m.g, legs:m.legs, arms:m.arms, head:m.head, x:x + 0.5, z:z + 0.5, gy, y:0, rot:0, state:'seek', breaker:!!breaker, brk:null, stunCd:0, t:0, rp:0, chk:0.3, lost:0, stun:0, path:[], cow:null, target:null, site:null, phase:Math.random()*6, zz:0 };
   u.y = u.gy; m.g.userData.cuatrero = u; scene.add(m.g); cuatreros.push(u); burst(TEX.spark, u.x, u.y + 1, u.z, 14, 2.5, 0xffd27a, 0.25, 3, 0.7); return u;
 }
@@ -186,7 +187,7 @@ function popCuatrero(u){
   const cx = Math.floor(u.x), cz = Math.floor(u.z);
   for (const [dx, dz] of DIRS) for (let dy = 0; dy <= 1; dy++){ const x = cx + dx, y = u.gy + dy, z = cz + dz; if (placed.has(bkey(x, y, z)) && getB(x, y, z) !== 0){ setB(x, y, z, 0); placed.delete(bkey(x, y, z)); burst(TEX.sq, x + 0.5, y + 0.5, z + 0.5, 6, 2.4, 0xc8935a, 0.16, 10, 0.6); } }
   burst(TEX.spark, u.x, u.y + 1, u.z, 30, 4, () => [0xffffff, 0xffd27a, 0xff8a6a][Math.floor(Math.random()*3)], 0.3, 5, 1); sndPoof(); sndGood();
-  const cow = u.cow; removeCuatrero(u); trappedN++; track('cuatrero_atrapado', { atrapados: trappedN, rol: u.role || 'cuatrero' }); if (cow) freeCow(cow); let fur = null; if (GS.inv){ GS.inv[2] += 6; if (CFG().earnFur) fur = grantFur(); refreshInv(); } toast(fur ? '¡Atrapaste al cuatrero! Dejó madera y pelaje para tu ' + fur.V.name + '.' : GS.inv ? '¡Atrapaste al cuatrero! Dejó 6 bloques de madera.' : '¡Atrapaste al cuatrero! Se rindió y se fue.'); refreshCounter(); tryWin();
+  const cow = u.cow; removeCuatrero(u); trappedN++; track('cuatrero_atrapado', { atrapados: trappedN, rol: u.role || 'cuatrero' }); if (cow) freeCow(cow); let fur = null; if (GS.inv){ GS.inv[2] += 6; if (CFG().earnFur || furEarn) fur = grantFur(); refreshInv(); } toast(fur ? '¡Atrapaste al cuatrero! Dejó madera y pelaje para tu ' + fur.V.name + '.' : GS.inv ? '¡Atrapaste al cuatrero! Dejó 6 bloques de madera.' : '¡Atrapaste al cuatrero! Se rindió y se fue.'); refreshCounter(); tryWin();
 }
 function follow(u, speed, dt){
   if (!u.path.length) return false; const [tx, tz] = u.path[0], dx = tx + 0.5 - u.x, dz = tz + 0.5 - u.z, d = Math.hypot(dx, dz);
@@ -294,9 +295,26 @@ function startNight(){
   cuatreros.forEach(u => { if (u.state === 'sleep') u.state = 'seek'; });
   toast((cuatreros.length ? (made > 1 ? '¡Es de noche! Llegaron ' + made + ' cuatreros.' : made === 1 ? '¡Es de noche! Llegó un cuatrero.' : '¡Es de noche! Los cuatreros despertaron.') : 'Noche tranquila: no hay vacas que robar.') + (moved ? ' Mudaron a tu vaca a un corral más lejano y reforzado.' : ''));
 }
-function startDay(){ phase = 'day'; clock = 0; warned = false; sndDawn(); toast(GS.world === 2 ? '¡Amaneció!' : cuatreros.length ? '¡Amaneció! Los cuatreros duermen: es el momento de encerrarlos.' : '¡Amaneció!'); }
-export function clearAdventure(){ cuatreros.slice().forEach(u => { burst(TEX.spark, u.x, u.y + 1, u.z, 12, 3, 0xffffff, 0.25, 4, 0.7); removeCuatrero(u); }); cows.forEach(c => { if (c.held) freeCow(c, true); }); corrals.slice().forEach(dropCorral); clearBunker(); crewT = 0; started = false; phase = 'day'; clock = 0; warned = false; troubleT = 0; $('tip').classList.add('hidden'); refreshCounter(); }
+function startDay(){ phase = 'day'; clock = 0; warned = false; eclNight = false; sndDawn(); toast(GS.world === 2 ? '¡Amaneció!' : cuatreros.length ? '¡Amaneció! Los cuatreros duermen: es el momento de encerrarlos.' : '¡Amaneció!'); }
+export function clearAdventure(){ cuatreros.slice().forEach(u => { burst(TEX.spark, u.x, u.y + 1, u.z, 12, 3, 0xffffff, 0.25, 4, 0.7); removeCuatrero(u); }); cows.forEach(c => { if (c.held) freeCow(c, true); }); corrals.slice().forEach(dropCorral); clearBunker(); crewT = 0; if (ecl){ scene.remove(ecl.m); ecl = null; } eclDone = false; eclNight = false; furEarn = false; nights = 0; trappedN = 0; started = false; phase = 'day'; clock = 0; warned = false; troubleT = 0; $('tip').classList.add('hidden'); refreshCounter(); }
 export function isTense(){ if (GS.mode !== 'aventura') return false; return GS.world === 2 ? here().length > 0 : (!GS.prizeUnlocked && phase === 'night' && here().length > 0); }
+/* Eclipse: si vas ganando demasiado rápido, cae un meteorito que adelanta la noche. Sus cuatreros se llevan tu pelaje y lo devuelven al atraparlos */
+let ecl = null, eclDone = false, eclNight = false, furEarn = false;
+const meteorMat = new THREE.MeshBasicMaterial({ color:0xc07aff, fog:false });
+function startEclipse(){ const fc = freeCows(); if (!fc.length) return; const spot = pickSpot(fc[0]); if (!spot) return; eclDone = true;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.7, 1.7), meteorMat), to = new THREE.Vector3(spot[0] + 0.5, spot[2] + 0.8, spot[1] + 0.5), from = to.clone().add(new THREE.Vector3(26, 58, 14)); m.position.copy(from); scene.add(m);
+  ecl = { t:3.4, T:3.4, spot, m, from, to }; sndWarn(); tone('sawtooth', 900, 120, 3.2, 0.08); toast('☄️ ¡Cuidado! Algo cae del cielo…'); }
+function updateEclipse(dt){ if (!ecl) return 1; ecl.t -= dt; const k = Math.min(1, 1 - ecl.t/ecl.T), m = ecl.m; m.position.lerpVectors(ecl.from, ecl.to, k*k); m.rotation.x += dt*5; m.rotation.z += dt*3.4;
+  for (let i = 0; i < 3; i++) spawnP(TEX.spark, m.position.x + (Math.random() - 0.5)*1.4, m.position.y + (Math.random() - 0.5)*1.4, m.position.z + (Math.random() - 0.5)*1.4, 1.5, 3, 0.8, 0.7, 0.4, [0xc07aff, 0xffffff, 0xff9a5a][i]);
+  if (ecl.t > 0) return 1 - k;
+  const [x, z, gy] = ecl.spot, cfg = CFG(); scene.remove(m); ecl = null; burst(TEX.spark, x + 0.5, gy + 1, z + 0.5, 70, 7, () => [0xc07aff, 0xffffff, 0xff9a5a][Math.floor(Math.random()*3)], 0.4, 6, 1.4); sndPoof(); sndNight();
+  const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+  const spots = [[x, z, gy]]; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]){ const g2 = stepY(x + dx, z + dz, gy); if (g2 != null) spots.push([x + dx, z + dz, g2]); }
+  for (let i = 0; i < cfg.eclipse.n; i++){ const [sx, sz, sg] = spots[i % spots.length]; makeCuatrero(sx, sz, sg, i === 0, true).eclipse = true; }
+  phase = 'night'; clock = 0; nights++; warned = true; eclNight = true; cuatreros.forEach(u => { if (u.state === 'sleep') u.state = 'seek'; });
+  let took = false; if (GS.inv){ for (let i = 3; i < Math.min(9, GS.inv.length); i++){ if (GS.inv[i] > 0) took = true; GS.inv[i] = 0; } furEarn = true; refreshInv(); }
+  track('eclipse_iniciado', { segundos: Math.round(GS.playTime), cuatreros: cfg.eclipse.n });
+  toast(took ? '🌑 ¡Eclipse! Los cuatreros del meteorito se llevaron tu pelaje. Atrápalos para recuperarlo.' : '🌑 ¡Eclipse! Del meteorito salieron cuatreros. ¡Atrápalos!'); return 0; }
 /* se gana con las 3 vacas armadas y ninguna robada */
 export function tryWin(){
   if (GS.prizeUnlocked || !plats.slice(0, 3).every(p => p.done) || plats.some(p => p.anim)) return;
@@ -349,6 +367,7 @@ export function updateAdventure(dt){
   // la aventura sigue en el primer mapa hasta ganar; en el Reino de Piedra (difícil y legendario), hasta armar la Vaca Real
   const on = GS.mode === 'aventura' && (w2 ? (GS.diff !== 'facil' && !(royal && royal.done)) : !GS.prizeUnlocked);
   if (w2 && royal && royal.locked && !lockTold && Math.hypot(player.x - royal.center.x, player.z - royal.center.z) < 7){ lockTold = true; toast('La Vaca Real está bloqueada: arma primero tus otras 3 vacas.'); }
+  if (LATE.updateDog) LATE.updateDog(dt, on && !w2 && GS.diff === 'facil' && nights > 0);
   if (!on){ applyLight(Math.min(1, GS.daylight + dt*0.5)); if (w2 && GS.mode === 'aventura'){ const dial = $('dial'); dial.classList.remove('hidden', 'night', 'warn'); dial.textContent = royal && royal.done ? '👑 El reino está en paz' : '🕊 Reino en paz'; } return; }
   if (!started && (w2 || cows.length)){ started = true; phase = 'day'; clock = 0; warned = false; if (!w2) toast('¡Tu primera vaca! Cuidado: de noche salen los cuatreros.'); }
   let d = 1, rem = 0;
@@ -358,6 +377,8 @@ export function updateAdventure(dt){
     else { rem = CFG().night - clock; if (rem <= 0){ startDay(); rem = CFG().day; } }
     d = phase === 'day' ? Math.max(0, Math.min(1, rem/12)) : Math.max(0, Math.min(1, 1 - rem/8));
   }
+  if (started && !w2 && !eclDone && !ecl && phase === 'day' && CFG().eclipse && plats.slice(0, 3).filter(p => p.done).length === 2 && cows.filter(c => c.vi < 3).length === 2 && CFG().eclipse.when(nights, GS.playTime)) startEclipse();
+  d = Math.min(d, updateEclipse(dt));
   applyLight(d);
   // los que te siguen por el portal llegan unos segundos después
   for (const u of cuatreros) if (u.followAt != null && GS.playTime >= u.followAt){ u.followAt = null; if (u.w !== GS.world) arrive(u); }
@@ -367,7 +388,7 @@ export function updateAdventure(dt){
   // HUD: reloj y tips
   uiT -= dt;
   if (uiT <= 0){ uiT = 0.25; const dial = $('dial'); dial.classList.remove('hidden'); dial.classList.toggle('night', phase === 'night' && started); dial.classList.toggle('warn', started && phase === 'day' && rem <= WARN);
-    const n = here().length; dial.textContent = (w2 && crewT > 0) ? '🕊 Tregua: los cuatreros del reino llegan en ' + fmtTime(crewT) : (!started ? '☀️ Arma tu primera vaca' : (phase === 'day' ? '☀️ Noche en ' + fmtTime(rem) : '🌙 Amanece en ' + fmtTime(rem)) + (n ? ' · 🤠 ' + n : '')); }
+    const n = here().length; dial.textContent = (w2 && crewT > 0) ? '🕊 Tregua: los cuatreros del reino llegan en ' + fmtTime(crewT) : (!started ? '☀️ Arma tu primera vaca' : (phase === 'day' ? '☀️ Noche en ' + fmtTime(rem) : (eclNight ? '🌑 Eclipse: amanece en ' : '🌙 Amanece en ') + fmtTime(rem)) + (n ? ' · 🤠 ' + n : '')); }
   const robbed = cows.some(c => c.held), trouble = !w2 && (robbed || cuatreros.length > 0);
   if (!trouble){ if (troubleT > 0){ troubleT = 0; $('tip').classList.add('hidden'); } }
   else { troubleT += dt; if (troubleT >= 60 && CFG().aids){ tipT -= dt; if (tipT <= 0){ tipT = 10; const keys = []; if (corrals.length) keys.push('corral'); if (cuatreros.length){ keys.push('stun'); if (phase === 'day') keys.push('day'); } keys.push('fence'); const el = $('tip'); el.textContent = TIPS[keys[tipI++ % keys.length]](); el.classList.remove('hidden'); } } }
@@ -445,7 +466,7 @@ export function royalBlast(){
 }
 
 /* panel de debug */
-export function advFlags(){ return { modo:GS.mode, iniciado:started, fase:phase, reloj:clock, faltan:started ? (phase === 'day' ? CFG().day : CFG().night) - clock : null, noches:nights, luz:GS.daylight, cuatreros:cuatreros.map(u => ({ mundo:u.w, rol:u.role, estado:u.state, mareado:u.stun > 0, x:+u.x.toFixed(1), z:+u.z.toFixed(1), y:u.gy, llevaVaca:u.cow ? cowName(u.cow) : null, objetivo:u.target ? cowName(u.target) : null })), vacasRobadas:cows.filter(c => c.held).map(cowName), corrales:corrals.length, atrapados:trappedN, problemaHace:troubleT }; }
+export function advFlags(){ return { modo:GS.mode, iniciado:started, fase:phase, eclipse:ecl ? 'cayendo' : eclNight ? 'noche' : eclDone ? 'pasó' : 'no', reloj:clock, faltan:started ? (phase === 'day' ? CFG().day : CFG().night) - clock : null, noches:nights, luz:GS.daylight, cuatreros:cuatreros.map(u => ({ mundo:u.w, rol:u.role, estado:u.state, mareado:u.stun > 0, x:+u.x.toFixed(1), z:+u.z.toFixed(1), y:u.gy, llevaVaca:u.cow ? cowName(u.cow) : null, objetivo:u.target ? cowName(u.target) : null })), vacasRobadas:cows.filter(c => c.held).map(cowName), corrales:corrals.length, atrapados:trappedN, problemaHace:troubleT }; }
 export function advDebug(){ const f = advFlags(); let h = 'mundo: <b>' + GS.world + '</b>   modo: <b>' + f.modo + '</b>'; if (f.modo !== 'aventura') return h + '\n'; h += ' (<b>' + GS.diff + '</b>)' + (GS.inv ? '   bloques: ' + GS.inv.join(',') + '   recuperables: ' + GS.recover : '') + (crewT > 0 ? '   tregua: ' + fmtTime(crewT) : '') + (GS.world === 2 ? '   búnker: ' + bunkerInfo() : '');
   h += '   fase: <b>' + (f.iniciado ? f.fase : 'sin iniciar') + '</b>' + (f.faltan != null ? ' (cambia en ' + fmtTime(f.faltan) + ')' : '') + '   noches: ' + f.noches + '   (L = anochecer, J = amanecer)\n';
   h += 'cuatreros: <b>' + f.cuatreros.length + '</b>' + f.cuatreros.map(u => ' [' + u.estado + (u.mareado ? '*' : '') + (u.llevaVaca ? ' con ' + u.llevaVaca.replace('Vaca ', '') : '') + ' @' + u.x + ',' + u.z + ']').join('') + '   atrapados: ' + f.atrapados + '\n';
@@ -453,6 +474,7 @@ export function advDebug(){ const f = advFlags(); let h = 'mundo: <b>' + GS.worl
   return h; }
 if (DEBUG) document.addEventListener('keydown', e => { if (state !== 'play' || GS.mode !== 'aventura') return;
   if (e.code === 'KeyT') debugSkipTruce();
+  if (e.code === 'KeyY' && started && !ecl){ phase = 'day'; startEclipse(); }
   if (e.code === 'KeyL'){ if (!started && cows.length) started = true; if (started){ phase = 'day'; clock = CFG().day - 2; warned = true; } }
   if (e.code === 'KeyJ' && started && phase === 'night') clock = CFG().night - 1; });
 
