@@ -20,7 +20,7 @@ const WARN = 30;
 export const DIFFS = {
   facil:      { label:'fácil',      day:95, night:65, perNight:(n, free) => Math.min(free, 2), maxActive:3, stun:4, stunCd:0, limited:false, breakers:false, big:false, aids:true,  moveCorral:false },
   dificil:    { label:'difícil',    day:70, night:90, perNight:(n, free) => free ? Math.min(n, 4) : 0, maxActive:6, stun:2, stunCd:6, limited:true, breakers:true, big:false, aids:true,  moveCorral:false, recover:30, eclipse:{ n:2, when:(nights, t) => t < 120 } },
-  legendario: { label:'legendario', day:60, night:95, perNight:(n, free) => free ? Math.min(n + 1, 5) : 0, maxActive:7, stun:2, stunCd:7, limited:true, breakers:true, big:true,  aids:false, moveCorral:true, recover:20, dig:true, earnFur:true, eclipse:{ n:3, when:(nights, t) => t < 120 } },
+  legendario: { label:'legendario', day:60, night:95, perNight:(n, free) => free ? Math.min(n + 1, 5) : 0, maxActive:7, stun:2, stunCd:7, limited:true, breakers:true, big:true,  aids:false, moveCorral:true, recover:20, dig:true, earnFur:true, eclipse:{ n:3, when:(nights, t) => t < 240 } },
 };
 const CFG = () => (GS.mode === 'aventura' && DIFFS[GS.diff]) || DIFFS.facil;
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
