@@ -1,4 +1,4 @@
-/* PERRO PASTOR (aventura fácil): llega con la primera noche, te sigue y marea a los cuatreros que se acerquen */
+/* PERRO PASTOR (aventura fácil): llega poco después de tu primera vaca, te sigue y marea a los cuatreros que se acerquen */
 import * as THREE from 'three';
 import { late } from './state.js';
 import { topY } from './world.js';

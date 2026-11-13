@@ -367,8 +367,8 @@ export function updateAdventure(dt){
   // la aventura sigue en el primer mapa hasta ganar; en el Reino de Piedra (difícil y legendario), hasta armar la Vaca Real
   const on = GS.mode === 'aventura' && (w2 ? (GS.diff !== 'facil' && !(royal && royal.done)) : !GS.prizeUnlocked);
   if (w2 && royal && royal.locked && !lockTold && Math.hypot(player.x - royal.center.x, player.z - royal.center.z) < 7){ lockTold = true; toast('La Vaca Real está bloqueada: arma primero tus otras 3 vacas.'); }
-  if (LATE.updateDog) LATE.updateDog(dt, on && !w2 && GS.diff === 'facil' && nights > 0);
-  if (!on){ applyLight(Math.min(1, GS.daylight + dt*0.5)); if (w2 && GS.mode === 'aventura'){ const dial = $('dial'); dial.classList.remove('hidden', 'night', 'warn'); dial.textContent = royal && royal.done ? '👑 El reino está en paz' : '🕊 Reino en paz'; } return; }
+  if (LATE.updateDog) LATE.updateDog(dt, GS.mode === 'aventura' && !w2 && GS.diff === 'facil' && (GS.prizeUnlocked ? cows.length > 0 : started && (nights > 0 || clock > 7)));   // llega unos segundos después de tu primera vaca
+  if (!on){ applyLight(Math.min(1, GS.daylight + dt*0.5)); if (GS.mode === 'aventura'){ const dial = $('dial'); dial.classList.remove('hidden', 'night', 'warn'); dial.textContent = !w2 ? '🏆 ¡Ganaste! La granja está en paz' : royal && royal.done ? '👑 El reino está en paz' : '🕊 Reino en paz'; } return; }
   if (!started && (w2 || cows.length)){ started = true; phase = 'day'; clock = 0; warned = false; if (!w2) toast('¡Tu primera vaca! Cuidado: de noche salen los cuatreros.'); }
   let d = 1, rem = 0;
   if (started){
