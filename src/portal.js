@@ -35,7 +35,7 @@ export function setWorld(w, live){
   loadWorld(w); for (let i = 0; i < chunks.length; i++) buildChunk(i); dirty.clear();
   relocatePlats();
   if (w === 2 && !HOTBAR.includes(B.ROYAL)) HOTBAR.push(B.ROYAL); LATE.syncHotbar();
-  cows.forEach(c => { c.group.visible = c.w === w; });
+  cows.forEach(c => { c.group.visible = c.w === w; if (!c.homed && c.p.placed){ c.homed = true; c.x = c.p.center.x; c.z = c.p.center.z; c.gy = c.y = c.p.H; } });   // una vaca cargada antes de visitar su mapa se ubica al llegar
   setSkyTheme(w); onWorldChange(from, w, live);
   // llegas junto a la casa por la que cruzaste
   const [ax, az] = w === 2 ? [SPAWN.x, SPAWN.z] : [KEYROOM.x + 3.5, KEYROOM.z + 0.5];

@@ -34,16 +34,18 @@ function makePlat(i){
 function placePlat(p){
   const [px, pz] = PLAT_POS[p.i === 3 ? 0 : p.i]; p.x = px; p.z = pz; p.H = platH[p.i === 3 ? 0 : p.i]; p.center.set(px + 2, p.H, pz + 2.5);
   const sx = px + 2, sz = pz + 5.7, sy = hmap[Math.floor(sx) + Math.floor(sz)*WX];
-  p.post.position.set(sx, sy + 0.95, sz); p.s1.position.set(sx, sy + 1.75, sz + 0.09); p.s2.position.set(sx, sy + 1.75, sz - 0.09); p.beam.position.set(sx, sy + 2.2 + 35, sz); p.core.position.copy(p.beam.position);
+  p.placed = true; p.post.position.set(sx, sy + 0.95, sz); p.s1.position.set(sx, sy + 1.75, sz + 0.09); p.s2.position.set(sx, sy + 1.75, sz - 0.09); p.beam.position.set(sx, sy + 2.2 + 35, sz); p.core.position.copy(p.beam.position);
 }
 function clearCells(p){ p.cells.forEach(c => { cellMap.delete(cellKey(c.x, c.y, c.z)); p.group.remove(c.ghost); p.group.remove(c.over); }); p.cells.length = 0; p.kind = null; }
 export const plats = PLAT_POS.map((_, i) => { const p = makePlat(i); p.here = true; placePlat(p); return p; });
 /* la Vaca Real se desbloquea cuando ya armaste las otras tres */
 export function refreshLock(){ const p = plats[3]; if (!p || p.done) return; const locked = !plats.slice(0, 3).every(q => q.done); if (locked === p.locked) return;
   p.locked = locked; p.signMat.map.dispose(); p.signMat.map = signTexture(p.V.name, false, locked); p.beamMat.opacity = locked ? 0.14 : 0.42; clearCells(p); }
+/* la plataforma de la Vaca Real existe aunque estés en la granja (oculta), para que su progreso se guarde y se cargue siempre */
+export function ensureRoyal(){ if (plats.length >= 4) return plats[3]; const p = makePlat(3); p.locked = null; p.here = false; for (const o of [p.group, p.post, p.s1, p.s2, p.beam, p.core]) o.visible = false; plats.push(p); return p; }
 /* al cambiar de mapa: muestra solo las plataformas de ese mapa (y crea la de la Vaca Real la primera vez) */
 export function relocatePlats(){
-  if (GS.world === 2 && plats.length < 4){ const p = makePlat(3); p.locked = null; plats.push(p); }
+  if (GS.world === 2) ensureRoyal();
   for (const p of plats){
     if (p.anim){ p.anim.cubes.forEach(m => scene.remove(m)); p.anim = null; LATE.spawnCow(p); }   // una vaca a medio aparecer no se pierde
     p.here = (p.i === 3) === (GS.world === 2); clearCells(p); if (p.here) placePlat(p);

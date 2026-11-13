@@ -437,8 +437,8 @@ function updateRaider(u, dt){
 }
 /* al armar la Vaca Real: desaparecen todos los cuatreros del reino y estalla todo lo que construyeron */
 export function royalBlast(){
-  track('bunker_estallado', { cuatreros: cuatreros.filter(u => u.w === 2).length, bloques: foreign.size });
   const any = cuatreros.some(u => u.w === 2) || foreign.size > 0;
+  if (any) track('bunker_estallado', { cuatreros: cuatreros.filter(u => u.w === 2).length, bloques: foreign.size });   // solo si había algo que estallar
   cuatreros.slice().forEach(u => { if (u.w === 2){ burst(TEX.spark, u.x, u.y + 1, u.z, 22, 5, () => [0xffffff, 0xffd27a, 0xc8a8ff][Math.floor(Math.random()*3)], 0.3, 5, 1); removeCuatrero(u); } });
   let n = 0; for (const k of [...foreign]){ const x = k % 64, z = Math.floor(k/64) % 64, y = Math.floor(k/4096); if (getB(x, y, z) !== 0){ setB(x, y, z, 0); if (n++ % 3 === 0) burst(TEX.sq, x + 0.5, y + 0.5, z + 0.5, 5, 5, 0x9a9a9a, 0.2, 9, 0.9); } placed.delete(k); foreign.delete(k); }
   clearBunker(); crewT = 0; uiT = 0; if (any){ sndPoof(); sndNight(); toast('¡La Vaca Real espantó a todos los cuatreros del reino! Tu premio ahora es la Edición Real.'); }
