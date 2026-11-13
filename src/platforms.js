@@ -1,4 +1,5 @@
 /* PLATAFORMAS Y HOLOGRAMAS */
+import { track } from './analytics.js';
 import * as THREE from 'three';
 import { GS, LATE, late } from './state.js';
 import { $, clamp, fmtTime, hash2, mkCanvas } from './util.js';
@@ -89,7 +90,7 @@ export function updatePlatAnim(p, dt){
   a.cubes.forEach((m, i) => { m.scale.setScalar(Math.max(0.001, s)); m.rotation.y += dt*(4 + i%3); m.rotation.x += dt*3; m.position.y += dt*0.5;
     if (Math.random() < dt*10) spawnP(TEX.spark, m.position.x + (Math.random()-0.5), m.position.y + (Math.random()-0.5), m.position.z + (Math.random()-0.5), 0, 1.2, 0, 0.6, 0.3, 0xfff2a0); });
   if (a.t >= 1){ a.cubes.forEach(m => scene.remove(m)); p.anim = null;
-    const cow = LATE.spawnCow(p); sndMoo(LATE.COW_DEFS[p.i].pitch); burst(TEX.spark, p.center.x, p.H + 1, p.center.z, 40, 4.5, () => [0xfff2a0, 0xffffff, 0x9dff8a, p.V.beam][Math.floor(Math.random()*4)], 0.32, 5, 1.1); cow.bounce = 1;
+    track('vaca_armada', { vaca: p.V.key, segundos: p.time >= 999 ? null : Math.round(p.time), plantilla: p.kind }); const cow = LATE.spawnCow(p); sndMoo(LATE.COW_DEFS[p.i].pitch); burst(TEX.spark, p.center.x, p.H + 1, p.center.z, 40, 4.5, () => [0xfff2a0, 0xffffff, 0x9dff8a, p.V.beam][Math.floor(Math.random()*4)], 0.32, 5, 1.1); cow.bounce = 1;
     LATE.toast(p.i === 3 ? '¡Armaste la Vaca Real! Tu premio ahora es la Edición Real.' : '¡' + p.V.name + ' lista en ' + fmtTime(p.time) + '!');
     if (p.i === 3 && LATE.royalBlast) LATE.royalBlast(); LATE.tryWin(); }
 }

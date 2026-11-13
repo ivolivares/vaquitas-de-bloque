@@ -1,4 +1,5 @@
 /* UI: HUD, menús, estados y entrada */
+import { track } from './analytics.js';
 import { LATE } from './state.js';
 import { DEBUG, GS, late } from './state.js';
 import { $, clamp, fmtTime, mkCanvas, rgb } from './util.js';
@@ -40,7 +41,7 @@ export function updateCounter(){ while (silCanvas.length < plats.length){ const 
 export function timesText(){ return plats.filter(p => p.done && p.time != null).map(p => p.V.name + ': ' + (p.time >= 999 ? '—' : fmtTime(p.time))).join(' · ') + (GS.totalTime != null ? ' · Total: ' + fmtTime(GS.totalTime) : ''); }
 export function showWin(){ setState('win'); if (document.pointerLockElement) document.exitPointerLock(); sndFanfare(); $('winTimes').textContent = timesText() + (GS.newRecord ? ' · 🏆 ¡Nuevo récord!' : ''); $('winHint').classList.toggle('hidden', GS.world !== 1); confetti(); if (LATE.refreshShare) LATE.refreshShare(); }
 export function confetti(){ const box = $('confetti'), cols = ['#f08a24', '#58a83a', '#f6d04a', '#e2557a', '#6aa8f0', '#b98af0', '#ffffff']; for (let i = 0; i < 90; i++){ const e = document.createElement('i'); e.style.left = Math.random()*100 + 'vw'; e.style.background = cols[i % cols.length]; e.style.animationDuration = 2.2 + Math.random()*2.2 + 's'; e.style.animationDelay = Math.random()*1.2 + 's'; e.style.width = e.style.height = 8 + Math.random()*8 + 'px'; box.append(e); } setTimeout(() => { box.innerHTML = ''; }, 6500); }
-export function enterPrize(){ const ed = bestEdition(); buildPlush(ed); const b = plats.find(p => p.V.key === ed);
+export function enterPrize(){ const ed = bestEdition(); track('premio_visto', { edicion: ed, corona: !!GS.crown }); buildPlush(ed); const b = plats.find(p => p.V.key === ed);
   $('prizeSub').textContent = EDITIONS[ed].label + (ed === 'real' ? ' · armaste la Vaca Real' : b ? ' · tu vaca más rápida fue la ' + b.V.name : '') + (GS.crown ? ' · con corona de legendario' : ''); $('prizeTimes').textContent = timesText();
   prizeCam.position.set(3.9, 2.6, 5.4); orbit.target.set(0, 1.3, 0.15); orbit.autoRotate = true; setState('prize'); if (document.pointerLockElement) document.exitPointerLock(); if (LATE.refreshShare) LATE.refreshShare(); }
 $('btnResume').onclick = lock; $('btnKeep').onclick = lock;

@@ -1,4 +1,5 @@
 /* COMPARTIR: enlaces a redes y foto del peluche */
+import { track } from './analytics.js';
 import { GS, late } from './state.js';
 import { $, fmtTime } from './util.js';
 import { renderer } from './render.js';
@@ -26,7 +27,7 @@ function savePhoto(){ try { renderer.render(prizeScene, prizeCam); const a = doc
 function btn(box, cls, label, fn){ const b = document.createElement('button'); b.className = cls; b.textContent = label; b.onclick = fn; box.append(b); }
 function fill(id, withPhoto){ const box = $(id); box.innerHTML = '';
   if (navigator.share) btn(box, 'foto', 'Compartir…', () => { navigator.share({ title:'Vaquitas de Bloque', text:shareText(true), url:shareUrl() }).catch(() => {}); });   // menú del sistema (teléfonos)
-  NETS.forEach(([cls, label, url, copy]) => btn(box, cls, label, () => { if (copy) copyText(); window.open(url(), '_blank', 'noopener'); }));
+  NETS.forEach(([cls, label, url, copy]) => btn(box, cls, label, () => { track('compartido', { red: cls, edicion: bestEdition() }); if (copy) copyText(); window.open(url(), '_blank', 'noopener'); }));
   btn(box, 'foto', 'Copiar texto', copyText);
   if (withPhoto) btn(box, 'foto', 'Guardar foto', savePhoto); }
 export function refreshShare(){ fill('shareWin', false); fill('sharePrize', true); }

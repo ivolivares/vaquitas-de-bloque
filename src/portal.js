@@ -1,4 +1,5 @@
 /* PORTAL: las llaves escondidas y el paso entre la granja y el Reino de Piedra */
+import { track } from './analytics.js';
 import * as THREE from 'three';
 import { DEBUG, GS, LATE } from './state.js';
 import { $ } from './util.js';
@@ -41,7 +42,7 @@ export function setWorld(w, live){
   player.x = ax; player.z = az; player.y = topY(Math.floor(ax), Math.floor(az)) + 0.01; player.vx = player.vy = player.vz = 0; player.yaw = w === 2 ? 0 : Math.PI/2; player.pitch = 0.05;
   if (w === 2){ let y = 1; while (y < 30 && !(getB(RETURN.x, y - 1, RETURN.z) && !getB(RETURN.x, y, RETURN.z))) y++; K2.y = y + 0.9; }   // la llave flota sobre el piso de la casita, bajo su techo
   silverKey.position.set(K2.x, K2.y, K2.z); goldKey.visible = w === 1; silverKey.visible = w === 2; armed = false; updateCounter();
-  if (live){ flash(); sndFanfare();
+  if (live){ track('portal_cruzado', { destino: w === 2 ? 'reino' : 'granja', primera_vez: first }); flash(); sndFanfare();
     toast(w === 2 ? (first ? '¡Encontraste la llave! Bienvenido al Reino de Piedra, donde vive la Vaca Real. Para volver, entra a la casita de piedra que tienes detrás.' : 'De vuelta en el Reino de Piedra.') : 'Volviste a la granja.'); writeSave(); }
 }
 export function updatePortal(dt){

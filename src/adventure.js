@@ -1,4 +1,5 @@
 /* AVENTURA: ciclo de día y noche, cuatreros, corrales y tips */
+import { track } from './analytics.js';
 import * as THREE from 'three';
 import { DEBUG, GS, LATE, late } from './state.js';
 import { $, fmtTime, hash2, pxTex } from './util.js';
@@ -165,7 +166,7 @@ function freeCow(cow, quiet){
   burst(TEX.spark, cow.x, cow.y + 0.8, cow.z, 14, 3, 0xfff2a0, 0.28, 4, 0.8);
   cow.held = false; cow.holder = null; cow.corral = null; cow.x = p.center.x; cow.z = p.center.z; cow.gy = p.H; cow.y = p.H; cow.rot = Math.PI; cow.state = 'idle'; cow.t = 1.5; cow.bounce = 1;
   burst(TEX.spark, cow.x, cow.y + 0.8, cow.z, 18, 3, 0x9dff8a, 0.28, 4, 0.9);
-  if (!quiet){ sndMoo(COW_DEFS[cow.vi].pitch); sndGood(); for (let i = 0; i < 6; i++) spawnP(TEX.heart, cow.x + (Math.random() - 0.5), cow.y + 1.6, cow.z + (Math.random() - 0.5), 0, 1.2, 0, 1.3, 0.34, 0xff5a7a); toast('¡Liberaste a tu ' + cowName(cow) + '! Volvió a su plataforma.'); }
+  if (!quiet){ track('vaca_rescatada', { vaca: cow.p.V.key }); sndMoo(COW_DEFS[cow.vi].pitch); sndGood(); for (let i = 0; i < 6; i++) spawnP(TEX.heart, cow.x + (Math.random() - 0.5), cow.y + 1.6, cow.z + (Math.random() - 0.5), 0, 1.2, 0, 1.3, 0.34, 0xff5a7a); toast('¡Liberaste a tu ' + cowName(cow) + '! Volvió a su plataforma.'); }
   refreshCounter(); if (!quiet) tryWin();
 }
 
@@ -185,7 +186,7 @@ function popCuatrero(u){
   const cx = Math.floor(u.x), cz = Math.floor(u.z);
   for (const [dx, dz] of DIRS) for (let dy = 0; dy <= 1; dy++){ const x = cx + dx, y = u.gy + dy, z = cz + dz; if (placed.has(bkey(x, y, z)) && getB(x, y, z) !== 0){ setB(x, y, z, 0); placed.delete(bkey(x, y, z)); burst(TEX.sq, x + 0.5, y + 0.5, z + 0.5, 6, 2.4, 0xc8935a, 0.16, 10, 0.6); } }
   burst(TEX.spark, u.x, u.y + 1, u.z, 30, 4, () => [0xffffff, 0xffd27a, 0xff8a6a][Math.floor(Math.random()*3)], 0.3, 5, 1); sndPoof(); sndGood();
-  const cow = u.cow; removeCuatrero(u); trappedN++; if (cow) freeCow(cow); let fur = null; if (GS.inv){ GS.inv[2] += 6; if (CFG().earnFur) fur = grantFur(); refreshInv(); } toast(fur ? '¡Atrapaste al cuatrero! Dejó madera y pelaje para tu ' + fur.V.name + '.' : GS.inv ? '¡Atrapaste al cuatrero! Dejó 6 bloques de madera.' : '¡Atrapaste al cuatrero! Se rindió y se fue.'); refreshCounter(); tryWin();
+  const cow = u.cow; removeCuatrero(u); trappedN++; track('cuatrero_atrapado', { atrapados: trappedN, rol: u.role || 'cuatrero' }); if (cow) freeCow(cow); let fur = null; if (GS.inv){ GS.inv[2] += 6; if (CFG().earnFur) fur = grantFur(); refreshInv(); } toast(fur ? '¡Atrapaste al cuatrero! Dejó madera y pelaje para tu ' + fur.V.name + '.' : GS.inv ? '¡Atrapaste al cuatrero! Dejó 6 bloques de madera.' : '¡Atrapaste al cuatrero! Se rindió y se fue.'); refreshCounter(); tryWin();
 }
 function follow(u, speed, dt){
   if (!u.path.length) return false; const [tx, tz] = u.path[0], dx = tx + 0.5 - u.x, dz = tz + 0.5 - u.z, d = Math.hypot(dx, dz);
@@ -234,7 +235,7 @@ function updateCuatrero(u, dt){
           else { u.state = 'guard'; if (Math.random() < 0.5) wanderStep(u); }
         }
         follow(u, u.state === 'seek' ? 1.75 : 0.9, dt);
-        const c = u.target; if (c && !c.held && Math.hypot(c.x - u.x, c.z - u.z) < 1.35 && Math.abs(c.gy - u.gy) <= 2){ c.held = true; c.holder = u; u.cow = c; u.target = null; u.state = 'tie'; u.t = 2.5; u.path = []; sndAlarm(); toast('¡Un cuatrero atrapó a tu ' + cowName(c) + '! Enciérralo antes de que se la lleve.'); refreshCounter(); }
+        const c = u.target; if (c && !c.held && Math.hypot(c.x - u.x, c.z - u.z) < 1.35 && Math.abs(c.gy - u.gy) <= 2){ c.held = true; c.holder = u; u.cow = c; u.target = null; u.state = 'tie'; u.t = 2.5; u.path = []; track('vaca_robada', { vaca: c.p.V.key }); sndAlarm(); toast('¡Un cuatrero atrapó a tu ' + cowName(c) + '! Enciérralo antes de que se la lleve.'); refreshCounter(); }
       }
     }
     else if (u.state === 'tie'){ u.t -= dt; const c = u.cow; if (!c){ u.state = 'seek'; } else { u.rot = Math.atan2(c.x - u.x, c.z - u.z); if (u.t <= 0){ u.site = choosePen(u); u.state = 'carry'; u.rp = 0; u.lost = 0; u.idle = 0; u.dawn = false; } } }
@@ -285,7 +286,7 @@ export function hitCuatrero(maxT){
    Ciclo de día y noche
    --------------------------------------------------------------------- */
 function startNight(){
-  phase = 'night'; clock = 0; nights++; sndNight();
+  phase = 'night'; clock = 0; nights++; sndNight(); track('noche_iniciada', { noche: nights });
   if (GS.world === 2){ toast(here().length ? '¡Es de noche en el reino!' : 'Cae la noche en el reino.'); return; }   // aquí no hay vacas que robar
   const cfg = CFG(); let moved = 0; if (cfg.moveCorral) corrals.slice().forEach(c => { if (relocateCorral(c)) moved++; });
   const fc = freeCows(), n = Math.min(cfg.perNight(nights, fc.length), cfg.maxActive - cuatreros.length); let made = 0;
@@ -300,7 +301,7 @@ export function isTense(){ if (GS.mode !== 'aventura') return false; return GS.w
 export function tryWin(){
   if (GS.prizeUnlocked || !plats.slice(0, 3).every(p => p.done) || plats.some(p => p.anim)) return;
   if (cows.some(c => c.held)){ toast('¡Ya armaste las 3! Rescata a tus vacas robadas para ganar.'); return; }
-  GS.prizeUnlocked = true; GS.totalTime = GS.playTime; if (GS.mode === 'aventura' && GS.diff === 'legendario') GS.crown = true; GS.newRecord = LATE.submitRecord ? LATE.submitRecord() : false; $('btnPrizePause').classList.remove('hidden'); clearAdventure(); writeSave(); GS.winAt = GS.playTime + 1.8;
+  GS.prizeUnlocked = true; GS.totalTime = GS.playTime; track('partida_ganada', { segundos: Math.round(GS.playTime), noches: nights, cuatreros_atrapados: trappedN }); if (GS.mode === 'aventura' && GS.diff === 'legendario') GS.crown = true; GS.newRecord = LATE.submitRecord ? LATE.submitRecord() : false; $('btnPrizePause').classList.remove('hidden'); clearAdventure(); writeSave(); GS.winAt = GS.playTime + 1.8;
 }
 export function setMode(m){ if (m !== GS.mode){ GS.mode = m; if (m === 'libre') clearAdventure(); writeSave(); } applyDifficulty(); }
 export function setDifficulty(d){ if (!DIFFS[d]) return; if (d !== GS.diff){ GS.diff = d; clearAdventure(); writeSave(); } applyDifficulty(); }
@@ -334,8 +335,8 @@ $('btnStart').onclick = () => { pickDiff = GS.diff; refreshModeUI(); const n = p
 $('btnNew').onclick = () => { resetSave(); GS.saveReady = false; try { location.reload(); } catch (e){} };
 document.querySelectorAll('.diff').forEach(b => { b.onclick = () => { pickDiff = b.dataset.d; document.querySelectorAll('.diff').forEach(o => o.classList.toggle('sel', o === b)); }; });
 $('btnBackStart').onclick = () => showStep(1);
-$('btnPlay').onclick = () => { GS.mode = 'aventura'; setDifficulty(pickDiff || GS.diff); applyDifficulty(); writeSave(); showStep(1); lock(); };
-$('btnStartFree').onclick = () => { setMode('libre'); lock(); };
+$('btnPlay').onclick = () => { GS.mode = 'aventura'; setDifficulty(pickDiff || GS.diff); applyDifficulty(); writeSave(); showStep(1); lock(); track('partida_iniciada', { vacas_previas: plats.slice(0, 3).filter(p => p.done).length }); };
+$('btnStartFree').onclick = () => { setMode('libre'); lock(); track('partida_iniciada', { vacas_previas: plats.slice(0, 3).filter(p => p.done).length }); };
 function refreshCounter(){ cows.forEach(c => { silCanvas[c.vi].style.outline = c.held ? '3px solid #e2352a' : ''; }); }
 const TIPS = {
   corral: () => 'Tip: sigue el haz rojo y rompe cualquier bloque del corral de madera para liberar a tu vaca.',
@@ -436,6 +437,7 @@ function updateRaider(u, dt){
 }
 /* al armar la Vaca Real: desaparecen todos los cuatreros del reino y estalla todo lo que construyeron */
 export function royalBlast(){
+  track('bunker_estallado', { cuatreros: cuatreros.filter(u => u.w === 2).length, bloques: foreign.size });
   const any = cuatreros.some(u => u.w === 2) || foreign.size > 0;
   cuatreros.slice().forEach(u => { if (u.w === 2){ burst(TEX.spark, u.x, u.y + 1, u.z, 22, 5, () => [0xffffff, 0xffd27a, 0xc8a8ff][Math.floor(Math.random()*3)], 0.3, 5, 1); removeCuatrero(u); } });
   let n = 0; for (const k of [...foreign]){ const x = k % 64, z = Math.floor(k/64) % 64, y = Math.floor(k/4096); if (getB(x, y, z) !== 0){ setB(x, y, z, 0); if (n++ % 3 === 0) burst(TEX.sq, x + 0.5, y + 0.5, z + 0.5, 5, 5, 0x9a9a9a, 0.2, 9, 0.9); } placed.delete(k); foreign.delete(k); }

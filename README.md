@@ -10,6 +10,12 @@ Juego 3D en primera persona para navegador de escritorio. Explora un pequeño mu
 - En el reino, en difícil los cuatreros que quedaban te siguen y te empujan; en legendario además una cuadrilla le construye un búnker a la plataforma de la Vaca Real.
 - Modo debug: agrega `?debug=true` a la URL (panel de condiciones con F3, K completa la plataforma más cercana, L adelanta el anochecer, J el amanecer, O cambia de mapa, T termina la tregua del reino, contador de fps).
 
+## Analítica
+
+Eventos anónimos del juego hacia PostHog (`src/analytics.js`): sin cookies, sin perfiles de persona, sin grabación de sesiones ni autocaptura. Se activa solo si están definidas `VITE_PUBLIC_POSTHOG_KEY` y `VITE_PUBLIC_POSTHOG_HOST` (ver `.env.example`); no envía nada en local ni con `?debug=true`.
+
+Eventos: `partida_iniciada`, `vaca_armada`, `noche_iniciada`, `vaca_robada`, `vaca_rescatada`, `cuatrero_atrapado`, `partida_ganada`, `portal_cruzado`, `bunker_estallado`, `premio_visto`, `compartido`.
+
 ## Desarrollo
 
 ```bash

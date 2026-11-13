@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "posthog-js": "^1.447.15",
     "three": "0.160.0"
   },
   "devDependencies": {
