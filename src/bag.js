@@ -22,6 +22,7 @@ export function applyHotbar(){
   GS.unlocked = (Array.isArray(GS.unlocked) ? GS.unlocked : []).filter((id, i, a) => BAG.includes(id) && !BASE.includes(id) && a.indexOf(id) === i);
   const ok = Array.isArray(GS.hot) && GS.hot.length === 3 && GS.hot.every((id, i, a) => BAG.includes(id) && has(id) && a.indexOf(id) === i); if (!ok) GS.hot = null;
   const pick = free() && GS.hot ? GS.hot : BASE; for (let i = 0; i < 3; i++) HOTBAR[i] = pick[i];
+  const royal = HOTBAR.includes(B.ROYAL); HOTBAR.length = 9; if (GS.mode === 'aventura' && GS.diff === 'facil') HOTBAR.push(B.HAY); if (royal) HOTBAR.push(B.ROYAL);   // en fácil llevas heno para guiar y entretener a las vacas
   document.body.dataset.mode = GS.mode; syncHotbar(); selectSlot(GS.slot); }
 /* se llama al romper un bloque */
 export function discover(id){ if (!free() || !BAG.includes(id) || has(id)) return;

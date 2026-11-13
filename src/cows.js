@@ -132,7 +132,8 @@ export function updateCow(c, dt){
   if (getB(bx, fy, bz) !== 0){ let y = fy; while (y < WY-1 && getB(bx, y, bz) !== 0) y++; c.gy = y; }
   else if (getB(bx, fy-1, bz) === 0){ let y = fy; while (y > 1 && getB(bx, y-1, bz) === 0) y--; c.gy = y; }
   c.t -= dt; c.lured = false;
-  if (LATE.HOTBAR && LATE.HOTBAR[GS.slot] === B.HAY){ const d = Math.hypot(player.x - c.x, player.z - c.z);   // con heno en la mano, las vacas te siguen
+  if (c.eat > 0){ c.eat -= dt; c.state = 'graze'; c.t = 0.5; if (Math.random() < dt*0.5) spawnP(TEX.heart, c.x, c.y + 1.7, c.z, 0, 1, 0, 1.2, 0.28, 0xff5a7a); }   // le diste heno: se queda comiendo donde está
+  else if (LATE.HOTBAR && LATE.HOTBAR[GS.slot] === B.HAY){ const d = Math.hypot(player.x - c.x, player.z - c.z);   // con heno en la mano, las vacas te siguen
     if (d < 11){ c.lured = true; if (d > 2.4){ c.tx = player.x; c.tz = player.z; c.state = 'walk'; c.t = 2; } else if (c.state === 'walk'){ c.state = 'idle'; c.t = 0.8; if (Math.random() < 0.3) spawnP(TEX.heart, c.x, c.y + 1.7, c.z, 0, 1.1, 0, 1.2, 0.3, 0xff5a7a); } } }
   if (c.state === 'idle'){ if (c.t <= 0){ if (Math.random() < 0.62){ const a = Math.random()*Math.PI*2, r = 2 + Math.random()*8; c.tx = clamp(p_cx(c) + Math.cos(a)*r, 2.5, WX-2.5); c.tz = clamp(p_cz(c) + Math.sin(a)*r, 2.5, WZ-2.5); c.state = 'walk'; c.t = 9; } else { c.state = 'graze'; c.t = 2.5 + Math.random()*2.5; } } }
   else if (c.state === 'graze'){ if (c.t <= 0){ c.state = 'idle'; c.t = 1 + Math.random()*2.5; } }
@@ -155,6 +156,7 @@ export function updateCow(c, dt){
 }
 export const p_cx = c => c.p.center.x, p_cz = c => c.p.center.z;
 export function petCow(c){ sndMoo(COW_DEFS[c.vi].pitch); c.bounce = 1;
+  if (LATE.HOTBAR[GS.slot] === B.HAY && !c.held){ c.eat = 45; LATE.toast('¡Ñam! Se queda comiendo un buen rato.'); }
   if (LATE.HOTBAR[GS.slot] === B.FLOWERS && !c.p.flower){ if (c.vi === 3) LATE.toast('La Vaca Real ya tiene su corona.'); else { c.p.flower = true; addFlowers(c); writeSave(); LATE.toast('¡Le pusiste una corona de flores!'); } } const D = COW_DEFS[c.vi]; for (let i = 0; i < 7; i++) spawnP(TEX.heart, c.x + (Math.random()-0.5)*0.9, c.y + D.legH + D.body[1] + 0.3 + Math.random()*0.3, c.z + (Math.random()-0.5)*0.9, (Math.random()-0.5)*0.5, 1.1 + Math.random()*0.6, (Math.random()-0.5)*0.5, 1.3, 0.34, 0xff5a7a); }
 export const raycaster = new THREE.Raycaster();
 

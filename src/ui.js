@@ -26,6 +26,7 @@ document.addEventListener('pointerlockerror', lockFail);
 /* hotbar con íconos generados desde el atlas */
 export function syncHotbar(){ const hb = $('hotbar');
   while (hb.children.length < HOTBAR.length){ const d = document.createElement('div'); d.className = 'slot'; d.append(document.createElement('span'), mkCanvas(16, 16)); hb.append(d); }
+  while (hb.children.length > HOTBAR.length) hb.lastChild.remove();
   [...hb.children].forEach((el, i) => { const g = el.querySelector('canvas').getContext('2d'); g.clearRect(0, 0, 16, 16); g.drawImage(tileCanvas[BLOCK_TILES[HOTBAR[i]][2]], 0, 0); el.querySelector('span').textContent = (i + 1) % 10; }); }
 syncHotbar();
 export function selectSlot(i){ const n = HOTBAR.length; GS.slot = (i + n) % n; [...$('hotbar').children].forEach((el, k) => el.classList.toggle('sel', k === GS.slot)); $('slotname').textContent = BLOCK_NAME[HOTBAR[GS.slot]]; }
